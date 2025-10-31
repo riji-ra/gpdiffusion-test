@@ -688,15 +688,15 @@ def batch_exec_structured_py(input_arr,
 MODELLEN = 100000
 
 gn = np.load("dats_.npz")
-GENES1 = [_ for _ in gn["genes1"]]
-GENES2 = [_ for _ in gn["genes2"]]
-GENES3 = [_ for _ in gn["genes3"]]
+GENES1 = []
+GENES2 = []
+GENES3 = []
 
-#for p in range(128):
-#    # G1 は (MODELLEN, 3) にして三つの子ノード参照を持たせる
-#    GENES1.append(np.abs(np.random.uniform(0, 1, (MODELLEN, 3)) * (np.arange(MODELLEN)[:, None])))
-#    GENES2.append(np.random.choice(len(i0t) + len(i1t) + len(i2t), (MODELLEN), p=T))
-#    GENES3.append(np.random.uniform(0, 1, MODELLEN))
+for p in range(128):
+    # G1 は (MODELLEN, 3) にして三つの子ノード参照を持たせる
+    GENES1.append(np.abs(np.random.uniform(0, 1, (MODELLEN, 3)) * (np.arange(MODELLEN)[:, None])))
+    GENES2.append(np.random.choice(len(i0t) + len(i1t) + len(i2t), (MODELLEN), p=T))
+    GENES3.append(np.random.uniform(0, 1, MODELLEN))
 
 datas_ = None
 data_noised = None
@@ -705,9 +705,9 @@ test_datas = [np.array(testset[np.random.randint(0, len(testset)-1)][0]) / 127. 
 lp = 0
 
 bestacc = 1
-elites1 = [_ for _ in gn["elites1"]]
-elites2 = [_ for _ in gn["elites2"]]
-elites3 = [_ for _ in gn["elites3"]]
+elites1 = []
+elites2 = []
+elites3 = []
 
 accs = []
 accs2 = []
