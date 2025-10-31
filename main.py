@@ -685,7 +685,7 @@ def batch_exec_structured_py(input_arr,
 # -----------------------------
 # メイン側で使う遺伝子の形を三項に合わせる
 # -----------------------------
-MODELLEN = 100000
+MODELLEN = 1000000
 
 gn = np.load("dats_.npz")
 GENES1 = []
