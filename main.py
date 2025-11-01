@@ -5,6 +5,8 @@ import cv2
 #import torchvision
 import torchvision
 from copy import deepcopy
+import glob
+from diffusers.models import AutoencoderTiny
 
 import gc
 import torch
@@ -17,12 +19,10 @@ import hashlib
 from collections import defaultdict, deque
 ds = torchvision.datasets.STL10
 
-trainset = ds(root='data', split="train", download=True)
-testset = ds(root='data', split="test", download=True)
+trainset_ = list(glob.glob("/users/al/documents/val2017/*.*"))
 
-print(trainset)
-print(np.array(trainset[0][0]).shape)
-print(trainset[0][1])
+model = "stabilityai/your-stable-diffusion-model"
+ae = AutoencoderTiny.from_pretrained("madebyollin/taesd").to("mps")
 
 PE = lambda a: np.meshgrid(np.linspace(0, 1, a.shape[1]), np.linspace(0, 1, a.shape[0]))
 
@@ -67,7 +67,7 @@ i0__ = {
     "AI": lambda a: a[np.argsort(np.std(a, axis=-1))],
     "AJ": lambda a: a[:, np.argsort(np.mean(a, axis=0))],
     "AK": lambda a: a[:, np.argsort(np.std(a, axis=0))],
-    "AL": lambda a: cv2.resize(a, (a.shape[1]*2, a.shape[0]*2))[a.shape[0]//2:-a.shape[0]//2, a.shape[1]//2:-a.shape[1]//2],
+    "AL": lambda a: cv2.resize(a, (a.shape[1]*2, a.shape[0]*2))[a.shape[0]//2:a.shape[0]*2-a.shape[0]+a.shape[0]//2, a.shape[1]//2:a.shape[1]*2-a.shape[1]+a.shape[1]//2],
     "AM": lambda a: np.flip(a),
     "AN": lambda a: cv2.warpAffine(a, cv2.getRotationMatrix2D((a.shape[1]/2, a.shape[0]/2), 90, 1), (a.shape[1], a.shape[0]), borderMode=cv2.BORDER_REPLICATE),
     "AO": lambda a: np.abs(a) ** 0.5,
@@ -94,9 +94,9 @@ i0__ = {
     "BJ": lambda a: np.concatenate((a[:, 8:], a[:, :8]), axis=1),
     "BH": lambda a: a * 0.5,
     "BI": lambda a: a * -0.5,
-    "BJ": lambda a: a.T,
-    "BK": lambda a: np.fliplr(a.T),
-    "BL": lambda a: np.flipud(a.T),
+    #"BJ": lambda a: a.T,
+    #"BK": lambda a: np.fliplr(a.T),
+    #"BL": lambda a: np.flipud(a.T),
     "BM": lambda a: a ** 3,
     "BN": lambda a: a + 2.0,
     "BO": lambda a: a + 5.0,
@@ -118,20 +118,20 @@ i1_ = {
     "F": lambda a, b: np.minimum(a, b),
     "G": lambda a, b: np.fft.ifft2(np.fft.fft2(a) * np.fft.fft2(b) / a.shape[0] ** 2).real,
     "H": lambda a, b: np.fft.ifft2(np.fft.fft2(np.tanh(a) + 1) * np.fft.fft2(np.tanh(b)) / a.shape[0] ** 2).real,
-    "I": lambda a, b: (a.T @ (np.tanh(b[:a.shape[0], :a.shape[0]]) + 1)).T / a.shape[0],
+    #"I": lambda a, b: (a.T @ (np.tanh(b[:a.shape[0], :a.shape[0]]) + 1)).T / a.shape[0],
     "J": lambda a, b: np.take(a.flatten(), np.asarray(np.floor(np.tanh(b.flatten()) * (b.flatten().shape[0] - 1)), dtype=np.int32)).reshape(a.shape),
     "K": lambda a, b: np.take(a.flatten(), np.argsort(b.flatten())).reshape(a.shape),
     "L": lambda a, b: cv2.filter2D(a, -1, cv2.resize(b, (3, 3)) / 3**2),
     "M": lambda a, b: cv2.filter2D(a, -1, cv2.resize(b, (5, 5)) / 5**2),
     "N": lambda a, b: np.fft.ifft(np.fft.fft(a.flatten()) * np.fft.fft(np.tanh(b).flatten()) / a.shape[0] ** 2).real.reshape(a.shape),
     "O": lambda a, b: np.sin(a * b * np.pi),
-    "P": lambda a, b: np.mean(np.sin((np.sin((np.repeat(np.stack(PE(a), axis=-1), a.shape[0]//2, axis=-1) @ a + np.mean(a, axis=0)[None, None]) / np.sqrt(a.shape[0]) * np.pi) @ b.T + np.mean(b, axis=1)[None, None]) / np.sqrt(a.shape[0]) * np.pi), axis=-1),
+    #"P": lambda a, b: np.mean(np.sin((np.sin((np.repeat(np.stack(PE(a), axis=-1), a.shape[0]//2, axis=-1) @ a + np.mean(a, axis=0)[None, None]) / np.sqrt(a.shape[0]) * np.pi) @ b.T + np.mean(b, axis=1)[None, None]) / np.sqrt(a.shape[0]) * np.pi), axis=-1),
     "Q": lambda a, b: np.concatenate((a[::2], b[1::2]), axis=0),
     "R": lambda a, b: np.take(np.mean(a, axis=1), np.asarray(np.floor(np.tanh(b.flatten()) * (b.shape[0] - 1)), dtype=np.int32)).reshape(a.shape),
     "T": lambda a, b: np.exp(- ((PE(a)[0]**2 - np.mean(a)) / (np.var(a) + 0.01) + (PE(a)[1]**2 - np.mean(b)) / (np.var(b) + 0.01))),
     "U": lambda a, b: a[np.argsort(np.mean(b, axis=-1))],
     "V": lambda a, b: a[:, np.argsort(np.mean(b, axis=0))],
-    "W": lambda a, b: (a.T @ (b[:a.shape[0], :a.shape[0]])).T / a.shape[0],
+    #"W": lambda a, b: (a.T @ (b[:a.shape[0], :a.shape[0]])).T / a.shape[0],
     "X": lambda a, b: (a - b) ** 2,
     "Y": lambda a, b: cv2.filter2D(a, -1, cv2.resize(b, (11, 11)) / 11**2),
     "Z": lambda a, b: cv2.filter2D(a, -1, cv2.resize(b, (25, 25)) / 25**2),
@@ -211,27 +211,36 @@ len_i2 = len(i2t)
 # 関数速度計測（i0, i1, i2 をすべて計測して確率分布 T を作る）
 # -----------------------------
 G = []
-t2 = np.random.normal(0, 1, (96, 96))
+t2 = np.random.normal(0, 1, (63,61))
+j = 0
 for f in i0t:
     g = time.perf_counter()
-    for j in range(100):
+    for gt in range(100):
         f(t2) if f is not None else None
     G.append((time.perf_counter() - g) / 100)
-    t2 = np.random.normal(0, 1, (96, 96))
+    t2 = np.random.normal(0, 1, (63,61))
+    print(list(i0__.keys())[j], f(t2).shape)
+    j += 1
 
+j = 0
 for f in i1t:
     g = time.perf_counter()
-    for j in range(100):
+    for gt in range(100):
         f(t2, t2) if f is not None else None
     G.append((time.perf_counter() - g) / 100)
-    t2 = np.random.normal(0, 1, (96, 96))
+    t2 = np.random.normal(0, 1, (63,61))
+    print(list(i1_.keys())[j], f(t2, t2).shape)
+    j += 1
 
+j = 0
 for f in i2t:
     g = time.perf_counter()
-    for j in range(100):
+    for gt in range(100):
         f(t2, t2, t2) if f is not None else None
     G.append((time.perf_counter() - g) / 100)
-    t2 = np.random.normal(0, 1, (96, 96))
+    t2 = np.random.normal(0, 1, (63,61))
+    print(list(i2_.keys())[j], f(t2, t2, t2).shape)
+    j += 1
 
 # normalize into probability per-function
 T = np.asarray(1.0 / (np.array(G) ** 0.5 + 1e-12))
@@ -255,8 +264,8 @@ def compute_used_nodes_numba(G1, G2, MODELLEN, last_k, len_i0, len_i1):
     for ind in range(N):
         top = 0
         start = MODELLEN - last_k
-        if start < 4:
-            start = 4
+        if start < 5:
+            start = 5
         for s in range(start, MODELLEN):
             stack[top] = s
             top += 1
@@ -334,7 +343,7 @@ def precompute_structs_numba(G1, G2, G3, len_i0, len_i1, len_i2, last_k=3):
                 total_used += 1
 
     size = 1
-    while size < total_used * 4:
+    while size < total_used * 5:
         size <<= 1
     table_mask = size - 1
     key_table_keys = np.empty(size, dtype=np.int64)
@@ -351,8 +360,8 @@ def precompute_structs_numba(G1, G2, G3, len_i0, len_i1, len_i2, last_k=3):
     struct_alpha = np.empty(max_S, dtype=np.float32)
 
     # reserve sid 0,1,2,3 for inputs (R,G,B,T)
-    next_sid = 4
-    for sid in range(4):
+    next_sid = 5
+    for sid in range(5):
         struct_type[sid] = 0
         struct_func[sid] = -1
         struct_ch1[sid] = -1
@@ -593,7 +602,7 @@ def batch_exec_structured_py(input_arr,
                              restrict=True):
     N = node_structs.shape[0]
     MODELLEN = node_structs.shape[1]
-    if input_arr.ndim == 3 and input_arr.shape[2] == 4:
+    if input_arr.ndim == 3 and input_arr.shape[2] == 5:
         H, W, C = input_arr.shape
     elif input_arr.ndim == 2:
         H, W = input_arr.shape
@@ -624,13 +633,13 @@ def batch_exec_structured_py(input_arr,
                 needed[c2] = True; q.append(c2)
             if c3 >= 0 and not needed[c3]:
                 needed[c3] = True; q.append(c3)
-        if S >= 4:
+        if S >= 5:
             needed[0] = True; needed[1] = True; needed[2] = True
     else:
         needed = np.ones(S, dtype=np.bool_)
 
     outputs = [None] * S
-    if input_arr.ndim == 3 and input_arr.shape[2] == 4:
+    if input_arr.ndim == 3 and input_arr.shape[2] == 5:
         outputs[0] = input_arr[:, :, 0]; outputs[1] = input_arr[:, :, 1]; outputs[2] = input_arr[:, :, 2]
     else:
         outputs[0] = input_arr; outputs[1] = np.zeros_like(input_arr); outputs[2] = np.zeros_like(input_arr)
@@ -685,9 +694,9 @@ def batch_exec_structured_py(input_arr,
 # -----------------------------
 # メイン側で使う遺伝子の形を三項に合わせる
 # -----------------------------
-MODELLEN = 1000000
+MODELLEN = 150000
 
-gn = np.load("dats_.npz")
+#gn = np.load("dats_.npz")
 GENES1 = []
 GENES2 = []
 GENES3 = []
@@ -701,7 +710,6 @@ for p in range(128):
 datas_ = None
 data_noised = None
 datas = None
-test_datas = [np.array(testset[np.random.randint(0, len(testset)-1)][0]) / 127. - 1 for j in range(1024)]
 lp = 0
 
 bestacc = 1
@@ -713,9 +721,10 @@ accs = []
 accs2 = []
 
 def plus_noise(___):
-    noise_percent = np.random.uniform(0, 1)
+    #kai nijo bunpu
+    noise_percent = np.random.normal(0, 1) ** 2 * 0.125
     noise = np.random.normal(0, 1, ___.shape)
-    plused = (noise * noise_percent) + (___ * (1 - noise_percent))
+    plused = (noise * noise_percent) + ___
     return np.concatenate((plused, np.ones(___.shape[:-1])[..., None] * noise_percent), axis=-1), noise * noise_percent
 
 for step in range(100000):
@@ -725,26 +734,32 @@ for step in range(100000):
     #if(step < 32):
     #    datas.extend([trainset[np.random.randint(0, len(trainset)-1)] for j in range(4)])
     #gt = int(np.ceil(2 ** (np.sin(np.sqrt(step) * np.pi) * 5)))
-    if(step % 8 == 0):
-        datas_ = [np.array(trainset[np.random.randint(0, len(trainset)-1)][0]) / 127. - 1 for j in range(96)]
-        data_noised = [plus_noise(__) for __ in datas_]
-        datas = [__[1] for __ in data_noised]
-        data_noised = [__[0] for __ in data_noised]
-        bestacc /= 1.02
+    if(step % 32 == 0 or len(trainset) == 0):
+        try:
+            trainset = []
+            for j in tqdm.tqdm(range(256)):
+                trainset.append(ae.encode(torchvision.io.read_image(trainset_[np.random.randint(0, len(trainset_))])[None].to("mps") / 255.).latents.detach().cpu().numpy()[0].transpose((1, 2, 0)))
+            datas_ = trainset
+            data_noised = [plus_noise(__) for __ in datas_]
+            datas = [__[1] for __ in data_noised]
+            data_noised = [__[0] for __ in data_noised]
+            bestacc /= 1.01
+        except:
+            continue
 
     G1 = np.stack([g.astype(np.int64) for g in GENES1], axis=0)   # shape (N, MODELLEN, 2)
     G2 = np.stack([g.astype(np.int64) for g in GENES2], axis=0)   # shape (N, MODELLEN)
     G3 = np.stack([g.astype(np.float32) for g in GENES3], axis=0)   # shape (N, MODELLEN)
 
     node_structs, struct_type, struct_func, struct_ch1, struct_ch2, struct_ch3, struct_alpha, idxs, struct_to_nodes_pair = \
-        precompute_structs_numba(G1, G2, G3, len(i0t), len(i1t), len(i2t), last_k=3)
+        precompute_structs_numba(G1, G2, G3, len(i0t), len(i1t), len(i2t), last_k=4)
 
     topo = topo_sort_structs_numba_from_arrays(struct_type, struct_ch1, struct_ch2, struct_ch3)
 
     for d_ in tqdm.tqdm(range(len(datas))):
         logits = batch_exec_structured_py(data_noised[d_],
                                         node_structs, struct_type, struct_func, struct_ch1, struct_ch2, struct_ch3,
-                                        struct_alpha, topo, last_k=3, restrict=True)
+                                        struct_alpha, topo, last_k=4, restrict=True)
         #logits = logits @ GENES3[]
         n = 0
         for logit_ in logits:
@@ -767,13 +782,13 @@ for step in range(100000):
     NGENES3 = []
     rank = np.argsort(losses)
 
-    if(np.max(-losses) / bestacc >= 1.0025):
+    if(np.max(-losses) / bestacc >= 1.005):
         bestacc = -np.min(losses)
         elites1.append(deepcopy(GENES1[rank[0]]))
         elites2.append(deepcopy(GENES2[rank[0]]))
         elites3.append(deepcopy(GENES3[rank[0]]))
 
-    for tt in range(16):
+    for tt in range(6):
         NGENES1.append(deepcopy(GENES1[rank[tt]]))
         NGENES2.append(deepcopy(GENES2[rank[tt]]))
         NGENES3.append(deepcopy(GENES3[rank[tt]]))
@@ -870,16 +885,20 @@ for step in range(100000):
 
     accs.append(str(np.min(losses)) + "," + str(np.mean(losses)) + "," + str(np.max(losses)) + "," + str(bestacc))
     
-    if(step % 6 == 0):
+    if(step % 50 == 0):
         np.savez('dats_.npz', genes1=GENES1, genes2=GENES2, genes3=GENES3, elites1=elites1, elites2=elites2, elites3=elites3)
     gc.collect()
     del GENES1, GENES2, GENES3
     GENES1 = NGENES1
     GENES2 = NGENES2
     GENES3 = NGENES3
-    for j in range(24):
-        p = np.random.randint(0, len(elites1))
-        GENES1.append(elites1[p])
-        GENES2.append(elites2[p])
-        GENES3.append(elites3[p])
+    GENES1.extend(elites1[-32:])
+    GENES2.extend(elites2[-32:])
+    GENES3.extend(elites3[-32:])
+    if(len(elites1) > 40):
+        for j in range(8):
+            p = np.random.randint(0, len(elites1))
+            GENES1.append(elites1[p])
+            GENES2.append(elites2[p])
+            GENES3.append(elites3[p])
     gc.collect()
