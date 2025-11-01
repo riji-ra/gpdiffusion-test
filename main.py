@@ -19,7 +19,7 @@ import hashlib
 from collections import defaultdict, deque
 ds = torchvision.datasets.STL10
 
-trainset_ = list(glob.glob("../test2017/*.*"))
+trainset_ = list(glob.glob("/workspace/test2017/*.*"))
 
 model = "stabilityai/your-stable-diffusion-model"
 ae = AutoencoderTiny.from_pretrained("madebyollin/taesd").to("cuda")
