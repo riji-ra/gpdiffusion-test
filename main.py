@@ -719,6 +719,7 @@ elites3 = []
 
 accs = []
 accs2 = []
+trainset = []
 
 def plus_noise(___):
     #kai nijo bunpu
