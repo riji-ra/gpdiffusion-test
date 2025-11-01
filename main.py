@@ -19,10 +19,10 @@ import hashlib
 from collections import defaultdict, deque
 ds = torchvision.datasets.STL10
 
-trainset_ = list(glob.glob("/users/al/documents/val2017/*.*"))
+trainset_ = list(glob.glob("../test2017/*.*"))
 
 model = "stabilityai/your-stable-diffusion-model"
-ae = AutoencoderTiny.from_pretrained("madebyollin/taesd").to("mps")
+ae = AutoencoderTiny.from_pretrained("madebyollin/taesd").to("cuda")
 
 PE = lambda a: np.meshgrid(np.linspace(0, 1, a.shape[1]), np.linspace(0, 1, a.shape[0]))
 
@@ -738,7 +738,7 @@ for step in range(100000):
         try:
             trainset = []
             for j in tqdm.tqdm(range(256)):
-                trainset.append(ae.encode(torchvision.io.read_image(trainset_[np.random.randint(0, len(trainset_))])[None].to("mps") / 255.).latents.detach().cpu().numpy()[0].transpose((1, 2, 0)))
+                trainset.append(ae.encode(torchvision.io.read_image(trainset_[np.random.randint(0, len(trainset_))])[None].to("cuda") / 255.).latents.detach().cpu().numpy()[0].transpose((1, 2, 0)))
             datas_ = trainset
             data_noised = [plus_noise(__) for __ in datas_]
             datas = [__[1] for __ in data_noised]
