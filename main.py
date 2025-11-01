@@ -736,17 +736,14 @@ for step in range(100000):
     #    datas.extend([trainset[np.random.randint(0, len(trainset)-1)] for j in range(4)])
     #gt = int(np.ceil(2 ** (np.sin(np.sqrt(step) * np.pi) * 5)))
     if(step % 8 == 0 or len(trainset) == 0):
-        try:
-            trainset = []
-            for j in tqdm.tqdm(range(256)):
-                trainset.append(ae.encode(torchvision.io.read_image(trainset_[np.random.randint(0, len(trainset_))])[None].to("cuda") / 255.).latents.detach().cpu().numpy()[0].transpose((1, 2, 0)))
-            datas_ = trainset
-            data_noised = [plus_noise(__) for __ in datas_]
-            datas = [__[1] for __ in data_noised]
-            data_noised = [__[0] for __ in data_noised]
-            bestacc /= 1.01
-        except:
-            continue
+        trainset = []
+        for j in tqdm.tqdm(range(256)):
+            trainset.append(ae.encode(torchvision.io.read_image(trainset_[np.random.randint(0, len(trainset_))])[None].to("cuda") / 255.).latents.detach().cpu().numpy()[0].transpose((1, 2, 0)))
+        datas_ = trainset
+        data_noised = [plus_noise(__) for __ in datas_]
+        datas = [__[1] for __ in data_noised]
+        data_noised = [__[0] for __ in data_noised]
+        bestacc /= 1.01
 
     G1 = np.stack([g.astype(np.int64) for g in GENES1], axis=0)   # shape (N, MODELLEN, 2)
     G2 = np.stack([g.astype(np.int64) for g in GENES2], axis=0)   # shape (N, MODELLEN)
