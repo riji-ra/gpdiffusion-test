@@ -734,7 +734,7 @@ for step in range(100000):
     #if(step < 32):
     #    datas.extend([trainset[np.random.randint(0, len(trainset)-1)] for j in range(4)])
     #gt = int(np.ceil(2 ** (np.sin(np.sqrt(step) * np.pi) * 5)))
-    if(step % 32 == 0 or len(trainset) == 0):
+    if(step % 8 == 0 or len(trainset) == 0):
         try:
             trainset = []
             for j in tqdm.tqdm(range(256)):
