@@ -91,6 +91,7 @@
             rightImg.src = "/gp" + data.iteration + "_" + Math.floor(Math.random() * data.right.id) + "_0.jpg"
             leftImgScore.textContent = "モデル#" + (data.left.id+1)
             rightImgScore.textContent = "モデル#" + (data.right.id+1)
+        }
         func();
         leftImg.addEventListener("click", () => {
             fetch("/gp/vote", {
