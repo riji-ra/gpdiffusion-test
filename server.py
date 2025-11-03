@@ -127,7 +127,7 @@ i1_ = {
     "O": lambda a, b: np.sin(a * b * np.pi),
     #"P": lambda a, b: np.mean(np.sin((np.sin((np.repeat(np.stack(PE(a), axis=-1), a.shape[0]//2, axis=-1) @ a + np.mean(a, axis=0)[None, None]) / np.sqrt(a.shape[0]) * np.pi) @ b.T + np.mean(b, axis=1)[None, None]) / np.sqrt(a.shape[0]) * np.pi), axis=-1),
     "Q": lambda a, b: np.concatenate((a[::2], b[1::2]), axis=0),
-    "R": lambda a, b: np.take(np.mean(a, axis=1), np.asarray(np.floor(np.tanh(b.flatten()) * (b.shape[0] - 1)), dtype=np.int32)).reshape(a.shape),
+    "R": lambda a, b: np.take(np.mean(a, axis=1), np.asarray(np.floor(np.tanh(b.flatten()) * (a.shape[0] - 1)), dtype=np.int32)).reshape(a.shape),
     "T": lambda a, b: np.exp(- ((PE(a)[0]**2 - np.mean(a)) / (np.var(a) + 0.01) + (PE(a)[1]**2 - np.mean(b)) / (np.var(b) + 0.01))),
     "U": lambda a, b: a[np.argsort(np.mean(b, axis=-1))],
     "V": lambda a, b: a[:, np.argsort(np.mean(b, axis=0))],
