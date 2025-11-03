@@ -75,7 +75,8 @@
             fetch("/gp/pair")
             .then(response => response.json())
             .then(d => {
-                data = d;
+                data.iteration = d.iteration;
+                data.iteration_2 = d.iteration_2;
                 iteration.textContent = data.iteration+1;
                 iteration_2.textContent = data.iteration_2+1;
                 leftImg.src = "/gp/imgs/" + data.iteration + "_" + data.left.id + "_0.jpg"
