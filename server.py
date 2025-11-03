@@ -707,11 +707,13 @@ for p in range(144):
     GENES3.append(np.random.uniform(0, 1, (MODELLEN)))
     # G1 は (MODELLEN, 3) にして三つの子ノード参照を持たせる
 
+NOW_ITER = 0
 if(os.path.exists("dats.npz")):
     data = np.load("dats.npz")
     GENES1 = [_ for _ in data["genes1"]]
     GENES2 = [_ for _ in data["genes2"]]
     GENES3 = [_ for _ in data["genes3"]]
+    NOW_ITER = int(np.mean(data["iter"]))
 
 #datas = [trainset[np.random.randint(0, len(trainset)-1)] for j in range(64)]
 #test_datas = [testset[np.random.randint(0, len(testset)-1)] for j in range(2048)]
@@ -750,7 +752,6 @@ for i in range(1):
         cv2.imwrite(f"imgs/0_{j}_{i}.jpg", np.maximum(0, np.minimum(255, ae.decode(torch.tensor(img[j][None], dtype=torch.float16).to("cuda"))[0][0].cpu().detach().numpy().transpose((1, 2, 0)) * 255)))
 
 
-NOW_ITER = 0
 ELO_RATINGS = np.zeros(12*12)
 VOTED_LIST = np.zeros(12*12)
 
@@ -856,7 +857,7 @@ def regenerate():
     ELO_RATINGS = np.zeros(144)
     VOTED_LIST = np.zeros(144)
     regenerating = False
-    np.savez('dats.npz', genes1=GENES1, genes2=GENES2, genes3=GENES3)
+    np.savez('dats.npz', genes1=GENES1, genes2=GENES2, genes3=GENES3, iter=np.ones(16) * NOW_ITER)
     return
 
 app = Flask(__name__, static_folder="imgs")
