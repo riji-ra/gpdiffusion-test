@@ -70,7 +70,7 @@
         const iteration_2 = document.getElementById("iteration_2");
         const img_change = document.getElementById("img_change");
         let data = {left:{}, right:{}}
-        data = await (await fetch("/gp/pair")).json()
+        data = await (await fetch("/gp/pair").json())
         data.left.id = Math.floor(Math.random() * 144)
         data.right.id = Math.floor(Math.random() * 144)
         leftImg.src = "/gp" + data.iteration + "_" + Math.floor(Math.random() * data.left.id) + "_0.jpg"
