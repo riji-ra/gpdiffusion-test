@@ -720,13 +720,19 @@ for p in range(144):
     GENES3.append(np.random.uniform(0, 1, (MODELLEN)))
     # G1 は (MODELLEN, 3) にして三つの子ノード参照を持たせる
 
-NOW_ITER = 2
+NOW_ITER = 0
 if(os.path.exists("dats.npz")):
     data = np.load("dats.npz")
     GENES1 = [_ for _ in data["genes1"]]
     GENES2 = [_ for _ in data["genes2"]]
     GENES3 = [_ for _ in data["genes3"]]
-    NOW_ITER = int(np.mean(data["iter"]))
+    try:
+        if("iter" in data.keys()):
+            NOW_ITER = int(np.mean(data["iter"]))
+        else:
+            NOW_ITER = 3
+    except:
+        NOW_ITER = 3
 
 #datas = [trainset[np.random.randint(0, len(trainset)-1)] for j in range(64)]
 #test_datas = [testset[np.random.randint(0, len(testset)-1)] for j in range(2048)]
