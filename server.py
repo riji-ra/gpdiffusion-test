@@ -695,7 +695,7 @@ def batch_exec_structured_py(input_arr,
 # -----------------------------
 # メイン側で使う遺伝子の形を三項に合わせる
 # -----------------------------
-MODELLEN = 300000
+MODELLEN = 500000
 GENES1 = []
 GENES2 = []
 GENES3 = []
