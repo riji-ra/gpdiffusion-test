@@ -127,7 +127,7 @@ i1_ = {
     "O": lambda a, b: np.sin(a * b * np.pi),
     #"P": lambda a, b: np.mean(np.sin((np.sin((np.repeat(np.stack(PE(a), axis=-1), a.shape[0]//2, axis=-1) @ a + np.mean(a, axis=0)[None, None]) / np.sqrt(a.shape[0]) * np.pi) @ b.T + np.mean(b, axis=1)[None, None]) / np.sqrt(a.shape[0]) * np.pi), axis=-1),
     "Q": lambda a, b: np.concatenate((a[::2], b[1::2]), axis=0),
-    "R": lambda a, b: np.take(np.mean(a, axis=1), np.asarray(np.floor(np.tanh(b.flatten()) * (a.shape[0] - 1)), dtype=np.int32)).reshape(a.shape),
+    "R": lambda a, b: np.take(np.mean(a, axis=1), np.asarray(np.floor(np.tanh(b.flatten()) * (b.shape[0] - 1)), dtype=np.int32)).reshape(a.shape),
     "T": lambda a, b: np.exp(- ((PE(a)[0]**2 - np.mean(a)) / (np.var(a) + 0.01) + (PE(a)[1]**2 - np.mean(b)) / (np.var(b) + 0.01))),
     "U": lambda a, b: a[np.argsort(np.mean(b, axis=-1))],
     "V": lambda a, b: a[:, np.argsort(np.mean(b, axis=0))],
@@ -702,7 +702,7 @@ GENES3 = []
 
 
 for p in range(144):
-    GENES1.append(np.abs((1-np.random.uniform(0, 1, (MODELLEN, 3))**1.5) * (np.arange(MODELLEN)[:, None])))
+    GENES1.append(np.abs((1-np.random.uniform(0, 1, (MODELLEN, 3))) * (np.arange(MODELLEN)[:, None])))
     GENES2.append(np.random.choice(len(i0t) + len(i1t) + len(i2t), (MODELLEN), p=T))
     GENES3.append(np.random.uniform(0, 1, (MODELLEN)))
     # G1 は (MODELLEN, 3) にして三つの子ノード参照を持たせる
@@ -870,8 +870,8 @@ def get_pair():
     while j == j2:
         j2 = np.random.randint(0, 12*12)
     return jsonify({
-        "left": {"id": j, "url": f"/gp/imgs/{NOW_ITER}_{j}_{i}.jpg", "score": ELO_RATINGS[j]},
-        "right": {"id": j2, "url": f"/gp/imgs/{NOW_ITER}_{j2}_{i}.jpg", "score": ELO_RATINGS[j2]},
+        "left": {"id": j, "url": f"/imgs/{NOW_ITER}_{j}_{i}.jpg", "score": ELO_RATINGS[j]},
+        "right": {"id": j2, "url": f"/imgs/{NOW_ITER}_{j2}_{i}.jpg", "score": ELO_RATINGS[j2]},
         "iteration": NOW_ITER,
         "iteration_2": np.sum(VOTED_LIST)//2,
     })
