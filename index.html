@@ -67,22 +67,27 @@
         const leftImgScore = document.getElementById("left-img-score");
         const rightImgScore = document.getElementById("right-img-score");
         const iteration = document.getElementById("iteration");
+        const iteration_2 = document.getElementById("iteration_2");
         const img_change = document.getElementById("img_change");
-        let data = null
+        let data = {left:{}, right:{}};
+
         const func = () => {
-            leftImg.src = ""
-            rightImg.src = ""
             fetch("/gp/pair")
             .then(response => response.json())
             .then(d => {
-                data = d;
-                leftImg.src = "/gp" + data.left.url;
-                rightImg.src = "/gp" + data.right.url;
-                leftImgScore.textContent = "モデル#" + (data.left.id+1) + " 現在のスコア: " + data.left.score.toFixed(2);
-                rightImgScore.textContent = "モデル#" + (data.right.id+1) + " 現在のスコア: " + data.right.score.toFixed(2);
+                data.iteration = d.iteration;
+                data.iteration_2 = d.iteration_2;
                 iteration.textContent = data.iteration+1;
                 iteration_2.textContent = data.iteration_2+1;
-            });
+                leftImg.src = "/gp/imgs/" + data.iteration + "_" + data.left.id + "_0.jpg"
+                rightImg.src = "/gp/imgs/" + data.iteration + "_" + data.right.id + "_0.jpg"
+            })
+            data.left.id = Math.floor(Math.random() * 144)
+            data.right.id = Math.floor(Math.random() * 144)
+            leftImg.src = "/gp/imgs/" + data.iteration + "_" + data.left.id + "_0.jpg"
+            rightImg.src = "/gp/imgs/" + data.iteration + "_" + data.right.id + "_0.jpg"
+            leftImgScore.textContent = "モデル#" + (data.left.id+1)
+            rightImgScore.textContent = "モデル#" + (data.right.id+1)
         }
         func();
         leftImg.addEventListener("click", () => {
@@ -90,6 +95,8 @@
                 method: "POST",
                 body: JSON.stringify({winner_id: data.left.id, loser_id: data.right.id})
             });
+            leftImg.src = ""
+            rightImg.src = ""
             func();
         });
         rightImg.addEventListener("click", () => {
@@ -97,6 +104,8 @@
                 method: "POST",
                 body: JSON.stringify({winner_id: data.right.id, loser_id: data.left.id})
             });
+            leftImg.src = ""
+            rightImg.src = ""
             func();
         });
     </script>
