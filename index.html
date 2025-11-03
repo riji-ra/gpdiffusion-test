@@ -69,7 +69,7 @@
         const iteration = document.getElementById("iteration");
         const img_change = document.getElementById("img_change");
         let data = null
-        const func = () => {fetch("/pair")
+        const func = () => {fetch("/gp/pair")
             .then(response => response.json())
             .then(d => {
                 data = d;
@@ -82,14 +82,14 @@
             });}
         func();
         leftImg.addEventListener("click", () => {
-            fetch("/vote", {
+            fetch("/gp/vote", {
                 method: "POST",
                 body: JSON.stringify({winner_id: data.left.id, loser_id: data.right.id})
             });
             func();
         });
         rightImg.addEventListener("click", () => {
-            fetch("/vote", {
+            fetch("/gp/vote", {
                 method: "POST",
                 body: JSON.stringify({winner_id: data.right.id, loser_id: data.left.id})
             });
