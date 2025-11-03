@@ -95,6 +95,8 @@
                 method: "POST",
                 body: JSON.stringify({winner_id: data.left.id, loser_id: data.right.id})
             });
+            leftImg.src = ""
+            rightImg.src = ""
             func();
         });
         rightImg.addEventListener("click", () => {
@@ -102,6 +104,8 @@
                 method: "POST",
                 body: JSON.stringify({winner_id: data.right.id, loser_id: data.left.id})
             });
+            leftImg.src = ""
+            rightImg.src = ""
             func();
         });
     </script>
