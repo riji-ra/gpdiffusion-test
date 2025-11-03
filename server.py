@@ -850,7 +850,7 @@ def regenerate():
                                                 struct_alpha, topo, last_k=4, restrict=True)
 
         for j in tqdm.tqdm(range(len(img))):
-            cv2.imwrite(f"imgs/{NOW_ITER+1}_{j}_{i}.jpg", np.maximum(0, np.minimum(255, ae.decode(torch.tensor(img[j][None], dtype=torch.float16).to("cuda"))[0][0].cpu().detach().numpy().transpose((1, 2, 0)) * 255)))
+            cv2.imwrite(f"imgs/{NOW_ITER+1}_{j}_{i}.jpg", np.maximum(0, np.minimum(255, ae.decode(torch.tensor(img[j][None], dtype=torch.float16).to("cuda"))[0][0].cpu().detach().numpy().transpose((1, 2, 0)) * 255)), [cv2.IMWRITE_JPEG_QUALITY, 70])
     NOW_ITER += 1
     gc.collect()
     ELO_RATINGS = np.zeros(144)
