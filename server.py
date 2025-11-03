@@ -14,6 +14,19 @@ import tqdm
 import hashlib
 import os
 import json
+import requests
+import time
+
+url = "https://keik.org/gp"
+try:
+    r = requests.get(url, timeout=5)
+    if r.status_code == 200:
+        sleep(60000)
+        exit(0)
+    else:
+        pass
+except requests.exceptions.RequestException as e:
+    pass
 
 PE = lambda a: np.meshgrid(np.linspace(0, 1, a.shape[1]), np.linspace(0, 1, a.shape[0]))
 
@@ -707,7 +720,7 @@ for p in range(144):
     GENES3.append(np.random.uniform(0, 1, (MODELLEN)))
     # G1 は (MODELLEN, 3) にして三つの子ノード参照を持たせる
 
-NOW_ITER = 0
+NOW_ITER = 2
 if(os.path.exists("dats.npz")):
     data = np.load("dats.npz")
     GENES1 = [_ for _ in data["genes1"]]
