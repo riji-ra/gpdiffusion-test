@@ -66,13 +66,13 @@
         const rightImgScore = document.getElementById("right-img-score");
         const iteration = document.getElementById("iteration");
         const img_change = document.getElementById("img_change");
+        let data = {}
         data.left.id = Math.floor(Math.random() * 144)
         data.right.id = Math.floor(Math.random() * 144)
         leftImg.src = "/gp" + data.iteration + "_" + Math.floor(Math.random() * data.left.id) + "_0.jpg"
         rightImg.src = "/gp" + data.iteration + "_" + Math.floor(Math.random() * data.right.id) + "_0.jpg"
         leftImgScore.textContent = "モデル#" + (data.left.id+1)
         rightImgScore.textContent = "モデル#" + (data.right.id+1)
-        let data = null
         const func = () => {
             data.left.id = Math.floor(Math.random() * 144)
             data.right.id = Math.floor(Math.random() * 144)
