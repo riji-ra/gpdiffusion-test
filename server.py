@@ -16,17 +16,19 @@ import os
 import json
 import requests
 import time
+import socket
 
-url = "https://keik.org/gp"
-try:
-    r = requests.get(url, timeout=5)
-    if r.status_code == 200:
-        time.sleep(60000)
-        exit(0)
-    else:
-        pass
-except requests.exceptions.RequestException as e:
-    pass
+def is_port_in_use(port: int, host: str = "0.0.0.0") -> bool:
+    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+        try:
+            s.bind((host, port))
+            pass
+        except OSError:
+            time.sleep(60000)
+            exit(0)
+
+port = 8080
+is_port_in_use()
 
 PE = lambda a: np.meshgrid(np.linspace(0, 1, a.shape[1]), np.linspace(0, 1, a.shape[0]))
 
