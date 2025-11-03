@@ -75,12 +75,14 @@
             fetch("/gp/pair")
             .then(response => response.json())
             .then(d => {
+                if(data.iteration != d.iteration){
+                leftImg.src = "/gp/imgs/" + data.iteration + "_" + data.left.id + "_0.jpg"
+                rightImg.src = "/gp/imgs/" + data.iteration + "_" + data.right.id + "_0.jpg"
+                }
                 data.iteration = d.iteration;
                 data.iteration_2 = d.iteration_2;
                 iteration.textContent = data.iteration+1;
                 iteration_2.textContent = data.iteration_2+1;
-                leftImg.src = "/gp/imgs/" + data.iteration + "_" + data.left.id + "_0.jpg"
-                rightImg.src = "/gp/imgs/" + data.iteration + "_" + data.right.id + "_0.jpg"
             })
             data.left.id = Math.floor(Math.random() * 144)
             data.right.id = Math.floor(Math.random() * 144)
