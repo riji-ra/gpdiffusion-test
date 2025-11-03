@@ -35,7 +35,7 @@
                 <span id="iteration_2"></span><span>/1000回目の投票</span>
             </div>
         </div>
-        <div class="mt-4 flex justify-center">
+        <div id="iimgs" class="mt-4 flex justify-center">
             <div class="w-1/2">
                 <img id="left-img" class="hover:brightness-50 cursor-pointer w-full h-full object-cover">
                 <div id="left-img-score"></div>
@@ -69,6 +69,7 @@
         const iteration = document.getElementById("iteration");
         const iteration_2 = document.getElementById("iteration_2");
         const img_change = document.getElementById("img_change");
+        const iimgs = document.getElementById("iimgs")
         let data = {left:{}, right:{}};
 
         const func = () => {
@@ -95,18 +96,22 @@
                 method: "POST",
                 body: JSON.stringify({winner_id: data.left.id, loser_id: data.right.id})
             });
-            leftImg.src = ""
-            rightImg.src = ""
             func();
+            iimgs.style.visibility = "hidden"
+            setTimeout(() => {
+                iimgs.style.visibility = "visible"
+            }, 200)
         });
         rightImg.addEventListener("click", () => {
             fetch("/gp/vote", {
                 method: "POST",
                 body: JSON.stringify({winner_id: data.right.id, loser_id: data.left.id})
             });
-            leftImg.src = ""
-            rightImg.src = ""
             func();
+            iimgs.style.visibility = "hidden"
+            setTimeout(() => {
+                iimgs.style.visibility = "visible"
+            }, 200)
         });
     </script>
 </body>
