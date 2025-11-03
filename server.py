@@ -1,28 +1,18 @@
-# numba 内完結型実装（置き換え用）
 import numpy as np
 from numba import njit, int64, int32
 import cv2
-#import torchvision
 import torchvision
 from copy import deepcopy
-import glob
-from diffusers.models import AutoencoderTiny
-
+from diffusers import DiffusionPipeline, AutoencoderTiny
+from flask import Flask, jsonify, request
 import gc
 import torch
 import glob
 import time
 from numba import jit
-#import matplotlib.pyplot as plt
 import tqdm
 import hashlib
-from collections import defaultdict, deque
-ds = torchvision.datasets.STL10
-
-trainset_ = list(glob.glob("/workspace/val2017/*.*"))
-
-model = "stabilityai/your-stable-diffusion-model"
-ae = AutoencoderTiny.from_pretrained("madebyollin/taesd").to("cuda")
+import json
 
 PE = lambda a: np.meshgrid(np.linspace(0, 1, a.shape[1]), np.linspace(0, 1, a.shape[0]))
 
@@ -107,6 +97,15 @@ i0__ = {
     "BT": lambda a: np.concatenate((a[2:], a[:2]), axis=0),
     "BU": lambda a: np.concatenate((a[:, -2:], a[:, :-2]), axis=1),
     "BV": lambda a: np.concatenate((a[:, 2:], a[:, :2]), axis=1),
+    "BW": lambda a: a * -2,
+    "BX": lambda a: a * -4,
+    "BY": lambda a: a * -0.1,
+    "BZ": lambda a: a * -0.5,
+    "CA": lambda a: ((np.concatenate((a[-1:], a[:-1]), axis=0) - a) ** 2 + (np.concatenate((a[1:], a[:1]), axis=0) - a) ** 2) ** 0.5,
+    "CB": lambda a: ((np.concatenate((a[:, -1:], a[:, :-1]), axis=1) - a) ** 2 + (np.concatenate((a[:, 1:], a[:, :1]), axis=1) - a) ** 2) ** 0.5,
+    "CC": lambda a: ((np.concatenate((a[:, -1:], a[:, :-1]), axis=1) - a) ** 2 + (np.concatenate((a[:, 1:], a[:, :1]), axis=1) - a) ** 2 + (np.concatenate((a[-1:], a[:-1]), axis=0) - a) ** 2 + (np.concatenate((a[1:], a[:1]), axis=0) - a) ** 2) ** 0.5,
+    "CD": lambda a: (a - cv2.GaussianBlur(a, (9, 9), 0)) / np.sqrt(cv2.GaussianBlur(a**2 + 1e-6, (9, 9), 0)),
+    "CF": lambda a: (a - cv2.GaussianBlur(a, (13, 13), 0)) / np.sqrt(cv2.GaussianBlur(a**2 + 1e-6, (13, 13), 0)),
 }
 
 i1_ = {
@@ -165,14 +164,17 @@ i1_ = {
     "BB": lambda a, b: np.take(TT2(TT2(np.take(b.flatten(), np.argsort(a.flatten())))), np.argsort(np.argsort(a.flatten()))).reshape(a.shape),
     "BC": lambda a, b: cv2.filter2D(a, -1, np.tanh(cv2.resize(b, (3, 3))) / 3**2),
     "BD": lambda a, b: cv2.filter2D(a, -1, np.tanh(cv2.resize(b, (5, 5))) / 5**2),
-    "BE": lambda a, b: cv2.filter2D(a, -1, np.tanh(cv2.resize(b, (7, 7))) / 5**2),
+    "BE": lambda a, b: cv2.filter2D(a, -1, np.tanh(cv2.resize(b, (7, 7))) / 7**2),
     "BF": lambda a, b: cv2.filter2D(a, -1, (np.tanh(cv2.resize(b, (3, 3))) + 1) / 3**2),
     "BG": lambda a, b: cv2.filter2D(a, -1, (np.tanh(cv2.resize(b, (5, 5))) + 1) / 5**2),
-    "BH": lambda a, b: cv2.filter2D(a, -1, (np.tanh(cv2.resize(b, (7, 7))) + 1) / 5**2),
+    "BH": lambda a, b: cv2.filter2D(a, -1, (np.tanh(cv2.resize(b, (7, 7))) + 1) / 7**2),
     "BI": lambda a, b: np.fft.ifft2(np.fft.fft2(a) ** 2 / np.fft.fft2(b)).real,
     "BJ": lambda a, b: np.fft.ifft2(np.fft.fft2(b) ** 2 / np.fft.fft2(a)).real,
     "BK": lambda a, b: np.fft.ifft2(np.fft.fft2(b) ** 2 / np.fft.fft2(np.tanh(a))).real,
-    "BL": lambda a, b: cv2.filter2D(a, -1, cv2.resize(b, (15, 15)) / 15**2),
+    "BL": lambda a, b: cv2.filter2D(a, -1, cv2.resize(b, (15, 14)) / 15**2),
+    "BM": lambda a, b: a - b*2,
+    "BN": lambda a, b: a*3 - b*2,
+    "BO": lambda a, b: a*4 - b*3,
 }
 
 i2_ = {
@@ -195,7 +197,12 @@ i2_ = {
     "AR": lambda a, b, c: a * (1 - np.tanh(b)) + c * (1 + np.tanh(b)),
     "AS": lambda a, b, c: b * (1 - np.tanh(a)) + c * (1 + np.tanh(a)),
     "AT": lambda a, b, c: b * (1 - np.tanh(np.mean(a))) + c * (1 + np.tanh(np.mean(a))),
+    "AU": lambda a, b, c: a @ b.T @ c / a.shape[0]**4,
+    "AV": lambda a, b, c: a @ np.tanh(b.T @ c) / a.shape[0]**4,
+    "AW": lambda a, b, c: a @ (np.tanh(b.T @ c) + 1) / a.shape[0]**4,
+    "AX": lambda a, b, c: np.tanh(a @ b.T) @ c / a.shape[0]**4,
 }
+
 
 # --- end original function dicts ---
 
@@ -211,40 +218,32 @@ len_i2 = len(i2t)
 # 関数速度計測（i0, i1, i2 をすべて計測して確率分布 T を作る）
 # -----------------------------
 G = []
-t2 = np.random.normal(0, 1, (63,61))
-j = 0
+t2 = np.random.normal(0, 1, (96, 128))
 for f in i0t:
     g = time.perf_counter()
-    for gt in range(100):
+    for j in range(100):
         f(t2) if f is not None else None
     G.append((time.perf_counter() - g) / 100)
-    t2 = np.random.normal(0, 1, (63,61))
-    print(list(i0__.keys())[j], f(t2).shape)
-    j += 1
+    t2 = np.random.normal(0, 1, (96, 128))
 
-j = 0
 for f in i1t:
     g = time.perf_counter()
-    for gt in range(100):
+    for j in range(100):
         f(t2, t2) if f is not None else None
     G.append((time.perf_counter() - g) / 100)
-    t2 = np.random.normal(0, 1, (63,61))
-    print(list(i1_.keys())[j], f(t2, t2).shape)
-    j += 1
+    t2 = np.random.normal(0, 1, (96, 128))
 
-j = 0
 for f in i2t:
     g = time.perf_counter()
-    for gt in range(100):
+    for j in range(100):
         f(t2, t2, t2) if f is not None else None
     G.append((time.perf_counter() - g) / 100)
-    t2 = np.random.normal(0, 1, (63,61))
-    print(list(i2_.keys())[j], f(t2, t2, t2).shape)
-    j += 1
+    t2 = np.random.normal(0, 1, (96, 128))
 
 # normalize into probability per-function
-T = np.asarray(1.0 / (np.array(G) ** 0.5 + 1e-12))
+T = np.asarray(1.0 / (np.array(G) ** 0.3 + 1e-12))
 T = T / np.sum(T)
+print(T)
 print("function distribution T length:", T.shape)
 
 # -----------------------------
@@ -264,8 +263,8 @@ def compute_used_nodes_numba(G1, G2, MODELLEN, last_k, len_i0, len_i1):
     for ind in range(N):
         top = 0
         start = MODELLEN - last_k
-        if start < 5:
-            start = 5
+        if start < 4:
+            start = 4
         for s in range(start, MODELLEN):
             stack[top] = s
             top += 1
@@ -331,7 +330,7 @@ def _hash_insert_get_sid(key_table_keys, key_table_vals, key, next_sid, table_ma
 # precompute_structs_numba に三項を追加、struct_alpha を返す
 # -----------------------------
 @njit(cache=True)
-def precompute_structs_numba(G1, G2, G3, len_i0, len_i1, len_i2, last_k=3):
+def precompute_structs_numba(G1, G2, G3, len_i0, len_i1, len_i2, last_k=10):
     N = G1.shape[0]
     MODELLEN = G1.shape[1]
     used = compute_used_nodes_numba(G1, G2, MODELLEN, last_k, len_i0, len_i1)
@@ -343,7 +342,7 @@ def precompute_structs_numba(G1, G2, G3, len_i0, len_i1, len_i2, last_k=3):
                 total_used += 1
 
     size = 1
-    while size < total_used * 5:
+    while size < total_used * 4:
         size <<= 1
     table_mask = size - 1
     key_table_keys = np.empty(size, dtype=np.int64)
@@ -359,9 +358,9 @@ def precompute_structs_numba(G1, G2, G3, len_i0, len_i1, len_i2, last_k=3):
     struct_ch3 = np.empty(max_S, dtype=np.int32)
     struct_alpha = np.empty(max_S, dtype=np.float32)
 
-    # reserve sid 0,1,2,3 for inputs (R,G,B,T)
-    next_sid = 5
-    for sid in range(5):
+    # reserve sid 0,1,2 for inputs (R,G,B)
+    next_sid = 4
+    for sid in range(4):
         struct_type[sid] = 0
         struct_func[sid] = -1
         struct_ch1[sid] = -1
@@ -602,7 +601,7 @@ def batch_exec_structured_py(input_arr,
                              restrict=True):
     N = node_structs.shape[0]
     MODELLEN = node_structs.shape[1]
-    if input_arr.ndim == 3 and input_arr.shape[2] == 5:
+    if input_arr.ndim == 3:
         H, W, C = input_arr.shape
     elif input_arr.ndim == 2:
         H, W = input_arr.shape
@@ -633,14 +632,15 @@ def batch_exec_structured_py(input_arr,
                 needed[c2] = True; q.append(c2)
             if c3 >= 0 and not needed[c3]:
                 needed[c3] = True; q.append(c3)
-        if S >= 5:
+        if S >= 4:
             needed[0] = True; needed[1] = True; needed[2] = True
     else:
         needed = np.ones(S, dtype=np.bool_)
 
     outputs = [None] * S
-    if input_arr.ndim == 3 and input_arr.shape[2] == 5:
-        outputs[0] = input_arr[:, :, 0]; outputs[1] = input_arr[:, :, 1]; outputs[2] = input_arr[:, :, 2]
+    if input_arr.ndim == 3:
+        for j in range(input_arr.shape[-1]):
+            outputs[j] = input_arr[:, :, j]
     else:
         outputs[0] = input_arr; outputs[1] = np.zeros_like(input_arr); outputs[2] = np.zeros_like(input_arr)
 
@@ -694,178 +694,134 @@ def batch_exec_structured_py(input_arr,
 # -----------------------------
 # メイン側で使う遺伝子の形を三項に合わせる
 # -----------------------------
-MODELLEN = 150000
-
-#gn = np.load("dats_.npz")
+MODELLEN = 300000
 GENES1 = []
 GENES2 = []
 GENES3 = []
 
-for p in range(128):
-    # G1 は (MODELLEN, 3) にして三つの子ノード参照を持たせる
-    GENES1.append(np.abs(np.random.uniform(0, 1, (MODELLEN, 3)) * (np.arange(MODELLEN)[:, None])))
-    GENES2.append(np.random.choice(len(i0t) + len(i1t) + len(i2t), (MODELLEN), p=T))
-    GENES3.append(np.random.uniform(0, 1, MODELLEN))
 
-datas_ = None
-data_noised = None
-datas = None
+for p in range(64):
+    GENES1.append(np.abs((1-np.random.uniform(0, 1, (MODELLEN, 3))**1.5) * (np.arange(MODELLEN)[:, None])))
+    GENES2.append(np.random.choice(len(i0t) + len(i1t) + len(i2t), (MODELLEN), p=T))
+    GENES3.append(np.random.uniform(0, 1, (MODELLEN)))
+    # G1 は (MODELLEN, 3) にして三つの子ノード参照を持たせる
+
+#datas = [trainset[np.random.randint(0, len(trainset)-1)] for j in range(64)]
+#test_datas = [testset[np.random.randint(0, len(testset)-1)] for j in range(2048)]
 lp = 0
 
-bestacc = 1
+bestacc = 10
 elites1 = []
 elites2 = []
 elites3 = []
 
 accs = []
 accs2 = []
-trainset = []
 
-def plus_noise(___):
-    #kai nijo bunpu
-    noise_percent = np.random.normal(0, 1) ** 2 * 0.125
-    noise = np.random.normal(0, 1, ___.shape)
-    plused = (noise * noise_percent) + ___
-    return np.concatenate((plused, np.ones(___.shape[:-1])[..., None] * noise_percent), axis=-1), noise * noise_percent
+G1 = np.stack([g.astype(np.int64) for g in GENES1], axis=0)   # shape (N, MODELLEN, 2)
+G2 = np.stack([g.astype(np.int64) for g in GENES2], axis=0)   # shape (N, MODELLEN)
+G3 = np.stack([g.astype(np.float32) for g in GENES3], axis=0)   # shape (N, MODELLEN)
 
-for step in range(100000):
-    losses = np.zeros(len(GENES1))
-    accuracys = np.zeros(len(GENES1))
-    anodes_list = []
-    #if(step < 32):
-    #    datas.extend([trainset[np.random.randint(0, len(trainset)-1)] for j in range(4)])
-    #gt = int(np.ceil(2 ** (np.sin(np.sqrt(step) * np.pi) * 5)))
-    if(step % 8 == 0 or len(trainset) == 0):
-        trainset = []
-        for j in tqdm.tqdm(range(256)):
-            trainset.append(ae.encode(torchvision.io.read_image(trainset_[np.random.randint(0, len(trainset_))])[None].to("cuda") / 255.).latents.detach().cpu().numpy()[0].transpose((1, 2, 0)))
-        datas_ = trainset
-        data_noised = [plus_noise(__) for __ in datas_]
-        datas = [__[1] for __ in data_noised]
-        data_noised = [__[0] for __ in data_noised]
-        bestacc /= 1.01
+import torch
+from diffusers import DiffusionPipeline, AutoencoderKL
 
-    G1 = np.stack([g.astype(np.int64) for g in GENES1], axis=0)   # shape (N, MODELLEN, 2)
-    G2 = np.stack([g.astype(np.int64) for g in GENES2], axis=0)   # shape (N, MODELLEN)
-    G3 = np.stack([g.astype(np.float32) for g in GENES3], axis=0)   # shape (N, MODELLEN)
+ae = AutoencoderTiny.from_pretrained("madebyollin/taesdxl", torch_dtype=torch.float16).to("mps")
 
-    node_structs, struct_type, struct_func, struct_ch1, struct_ch2, struct_ch3, struct_alpha, idxs, struct_to_nodes_pair = \
-        precompute_structs_numba(G1, G2, G3, len(i0t), len(i1t), len(i2t), last_k=4)
+node_structs, struct_type, struct_func, struct_ch1, struct_ch2, struct_ch3, struct_alpha, idxs, struct_to_nodes_pair = \
+    precompute_structs_numba(G1, G2, G3, len(i0t), len(i1t), len(i2t), last_k=4)
 
-    topo = topo_sort_structs_numba_from_arrays(struct_type, struct_ch1, struct_ch2, struct_ch3)
+topo = topo_sort_structs_numba_from_arrays(struct_type, struct_ch1, struct_ch2, struct_ch3)
 
-    for d_ in tqdm.tqdm(range(len(datas))):
-        logits = batch_exec_structured_py(data_noised[d_],
-                                        node_structs, struct_type, struct_func, struct_ch1, struct_ch2, struct_ch3,
-                                        struct_alpha, topo, last_k=4, restrict=True)
-        #logits = logits @ GENES3[]
-        n = 0
-        for logit_ in logits:
-            #logit = np.mean(np.mean(logit_, axis=-1), axis=-1)
-            #logit = logit - np.max(logit)
-            #logit = np.exp(logit) / np.sum(np.exp(logit))
-            #losses[n] += np.nan_to_num(np.log(logit[d[1]]), nan=-10000) * 0.05
-            losses[n] += np.mean(np.square(np.nan_to_num(logit_.transpose((1, 2, 0))) - datas[d_]))
-            accuracys[n] += np.mean(np.square(np.nan_to_num(logit_.transpose((1, 2, 0))) - datas[d_]))
-            n += 1
-    losses = np.log10(losses / len(datas)) * 10
-    accuracys = np.log10(accuracys / len(datas)) * 10
+print("topology calculated")
 
-    mutation_rate = np.random.uniform(0, 1)
-    if(np.random.uniform(0, 1) < 0.05):
-        mutation_rate = mutation_rate * (np.random.normal(0, 1) ** 2 + 1)
+for i in range(2):
+    img = batch_exec_structured_py(np.random.uniform(0, 1, (128, 96, 4)),
+                                            node_structs, struct_type, struct_func, struct_ch1, struct_ch2, struct_ch3,
+                                            struct_alpha, topo, last_k=4, restrict=True)
 
+    for j in tqdm.tqdm(range(len(img))):
+        cv2.imwrite(f"imgs/0_{j}_{i}.jpg", np.maximum(0, np.minimum(255, ae.decode(torch.tensor(img[j][None], dtype=torch.float16).to("mps"))[0][0].cpu().detach().numpy().transpose((1, 2, 0)) * 255)))
+
+
+NOW_ITER = 0
+ELO_RATINGS = np.zeros(64)
+VOTED_LIST = np.zeros(64)
+
+regenerating = False
+
+def regenerate():
+    global GENES1, GENES2, GENES3, NOW_ITER, ELO_RATINGS, VOTED_LIST, regenerating
+    if regenerating:
+        return
+    regenerating = True
+    rank = np.argsort(-np.array(ELO_RATINGS))
     NGENES1 = []
     NGENES2 = []
     NGENES3 = []
-    rank = np.argsort(losses)
-
-    if(np.max(-losses) / bestacc >= 1.005):
-        bestacc = -np.min(losses)
-        elites1.append(deepcopy(GENES1[rank[0]]))
-        elites2.append(deepcopy(GENES2[rank[0]]))
-        elites3.append(deepcopy(GENES3[rank[0]]))
-
-    for tt in range(6):
-        NGENES1.append(deepcopy(GENES1[rank[tt]]))
-        NGENES2.append(deepcopy(GENES2[rank[tt]]))
-        NGENES3.append(deepcopy(GENES3[rank[tt]]))
-    #rank = rank[np.random.randint(0, 20, 13)]
-    for g in range(16):
-        for h in range(16):
-            NGENE1 = deepcopy(GENES1[rank[g]])
-            NGENE2 = deepcopy(GENES2[rank[g]])
-            NGENE3 = deepcopy(GENES3[rank[g]])
+    for i in range(8):
+        NGENES1.append(deepcopy(GENES1[rank[i]]))
+        NGENES2.append(deepcopy(GENES2[rank[i]]))
+        NGENES3.append(deepcopy(GENES3[rank[i]]))
+        for j in range(7):
+            NGENE1 = deepcopy(GENES1[rank[i]])
+            NGENE2 = deepcopy(GENES2[rank[i]])
+            NGENE3 = deepcopy(GENES3[rank[i]])
             pos1 = np.random.randint(0, MODELLEN-2)
             pos2 = np.random.randint(pos1, MODELLEN-1)
-            NGENE1[pos1:pos2] = np.copy(GENES1[rank[h]][pos1:pos2])
-            NGENE2[pos1:pos2] = np.copy(GENES2[rank[h]][pos1:pos2])
+            NGENE1[pos1:pos2] = np.copy(GENES1[rank[j]][pos1:pos2])
+            NGENE2[pos1:pos2] = np.copy(GENES2[rank[j]][pos1:pos2])
             p = np.random.uniform(0, 1)
-            NGENE3[pos1:pos2] = NGENE3[pos1:pos2] * p + GENES3[rank[h]][pos1:pos2] * (1-p)
-            if(np.random.uniform(0, 1) < 0.1 * mutation_rate):
-                for __ in range(np.random.randint(1, 2**np.random.randint(1, 14))):
-                    pos = np.random.randint(4, MODELLEN-3)
-                    t = np.random.randint(0, 2)
-                    swap = NGENE1[pos, t]
-                    NGENE1[pos, t] = NGENE1[pos, (t+1)%3]
-                    NGENE1[pos, (t+1)%3] = swap
-            if(np.random.uniform(0, 1) < 0.05 * mutation_rate):
+            NGENE3[pos1:pos2] = NGENE3[pos1:pos2] * p + GENES3[rank[j]][pos1:pos2] * (1-p)
+            if(np.random.uniform(0, 1) < 0.05):
                 for __ in range(np.random.randint(1, 2**np.random.randint(1, 14))):
                     pos = np.random.randint(4, MODELLEN-3)
                     NGENE3[pos] = np.random.uniform(0, 1)
-            if(np.random.uniform(0, 1) < 0.01 * mutation_rate):
+            if(np.random.uniform(0, 1) < 0.01):
                 pos1 = np.random.randint(0, MODELLEN-2)
                 pos2 = np.random.randint(pos1, MODELLEN-1)
                 NGENE3[pos1:pos2] = NGENE3[pos1:pos2] * np.random.uniform(0.2, 0.8) + np.random.normal(0, np.random.uniform(0, 1)) * np.random.uniform(0, 1)
-            if(np.random.uniform(0, 1) < 0.005 * mutation_rate):
-                NGENE3 = np.fft.ifft(np.fft.fft(NGENE3+0j, axis=0) * np.fft.fft(GENES3[rank[h]]+0j, axis=0) / np.fft.fft(GENES3[np.random.randint(0, len(GENES3))], axis=0), axis=0).real
-            if(np.random.uniform(0, 1) < 0.005 * mutation_rate):
-                NGENE3 = np.floor(NGENE3 + (GENES3[rank[h]] - GENES3[np.random.randint(0, len(GENES3))]) * np.random.uniform(0, 1.5))
+            if(np.random.uniform(0, 1) < 0.005):
+                NGENE3 = np.fft.ifft(np.fft.fft(NGENE3+0j, axis=0) * np.fft.fft(GENES3[rank[j]]+0j, axis=0) / np.fft.fft(GENES3[np.random.randint(0, len(GENES3))], axis=0), axis=0).real
+            if(np.random.uniform(0, 1) < 0.005):
+                NGENE3 = np.floor(NGENE3 + (GENES3[rank[j]] - GENES3[np.random.randint(0, len(GENES3))]) * np.random.uniform(0, 1.5))
             NGENE3 = np.maximum(np.minimum(NGENE3, 1), 0)
-            if(np.random.uniform(0, 1) < 0.05 * mutation_rate):
+            if(np.random.uniform(0, 1) < 0.05):
                 for __ in range(np.random.randint(1, 2**np.random.randint(1, 14))):
                     pos = np.random.randint(4, MODELLEN-3)
                     NGENE1[pos][np.random.randint(0, 3)] = np.random.randint(0, pos-1)
-            if(np.random.uniform(0, 1) < 0.05 * mutation_rate):
-                for __ in range(np.random.randint(1, 2**np.random.randint(2, 13))):
+            if(np.random.uniform(0, 1) < 0.05):
+                for __ in range(np.random.randint(1, 2**np.random.randint(2, 14))):
                     pos = np.random.randint(4, MODELLEN-3)
                     NGENE2[pos] = np.random.choice(len(i0t) + len(i1t) + len(i2t), p=T)
-            if(np.random.uniform(0, 1) < 0.00015 * mutation_rate):
+            if(np.random.uniform(0, 1) < 0.00015):
                 NGENE1 = np.abs(np.random.uniform(0, 1, (MODELLEN, 3)) * (np.arange(MODELLEN)[:, None]))
-            if(np.random.uniform(0, 1) < 0.00015 * mutation_rate):
+            if(np.random.uniform(0, 1) < 0.00015):
                 NGENE2 = np.random.choice(len(i0t) + len(i1t) + len(i2t), (MODELLEN), p=T)
-            if(np.random.uniform(0, 1) < 0.003125 * mutation_rate):
+            if(np.random.uniform(0, 1) < 0.003125):
                 TT3 = 2**np.random.randint(1, 14)
                 pos1 = np.random.randint(0, MODELLEN-2)
                 pos2 = np.random.randint(pos1, MODELLEN)
                 lv = np.random.randint(-TT3, TT3)
                 NGENE1[pos1:pos2] = NGENE1[pos1:pos2] + lv
-            if(np.random.uniform(0, 1) < 0.0003125 * mutation_rate):
-                NGENE1 = np.floor(np.fft.ifft(np.fft.fft(NGENE1+0j, axis=0) * np.fft.fft(GENES1[rank[h]]+0j, axis=0) / np.fft.fft(GENES1[np.random.randint(0, len(GENES1))], axis=0), axis=0).real)
-            if(np.random.uniform(0, 1) < 0.00015 * mutation_rate):
-                NGENE1 = np.floor(NGENE1 + (GENES1[rank[h]] - GENES1[np.random.randint(0, len(GENES1))]) * np.random.uniform(0, 1.5))
-            if(np.random.uniform(0, 1) < 0.00015 * mutation_rate):
-                NGENE1 = np.floor(NGENE1 + (GENES1[rank[h]] - GENES1[np.random.randint(0, len(GENES1))]))
-            if(np.random.uniform(0, 1) < 0.003125 * mutation_rate):
+            if(np.random.uniform(0, 1) < 0.0003125):
+                NGENE1 = np.floor(np.fft.ifft(np.fft.fft(NGENE1+0j, axis=0) * np.fft.fft(GENES1[rank[j]]+0j, axis=0) / np.fft.fft(GENES1[np.random.randint(0, len(GENES1))], axis=0), axis=0).real)
+            if(np.random.uniform(0, 1) < 0.00015):
+                NGENE1 = np.floor(NGENE1 + (GENES1[rank[j]] - GENES1[np.random.randint(0, len(GENES1))]) * np.random.uniform(0, 1.5))
+            if(np.random.uniform(0, 1) < 0.00015):
+                NGENE1 = np.floor(NGENE1 + (GENES1[rank[j]] - GENES1[np.random.randint(0, len(GENES1))]))
+            if(np.random.uniform(0, 1) < 0.003125):
                 TT3 = 2**np.random.randint(1, 14)
                 pos1 = np.random.randint(TT3+1, MODELLEN-TT3-1)
                 pos2 = np.random.randint(pos1, MODELLEN-TT3-1)
                 pos3 = np.random.randint(-TT3, TT3)
                 NGENE1[pos1-pos3:pos2-pos3] = NGENE1[pos1:pos2]
-            if(np.random.uniform(0, 1) < 0.003125 * mutation_rate):
+            if(np.random.uniform(0, 1) < 0.003125):
                 TT3 = 2**np.random.randint(1, 14)
                 pos1 = np.random.randint(TT3+1, MODELLEN-TT3-1)
                 pos2 = np.random.randint(pos1, MODELLEN-TT3-1)
                 pos3 = np.random.randint(-TT3, TT3)
                 NGENE2[pos1-pos3:pos2-pos3] = NGENE2[pos1:pos2]
-            if(np.random.uniform(0, 1) < 0.003125 * mutation_rate):
-                TT3 = 2**np.random.randint(1, 14)
-                pos1 = np.random.randint(TT3+1, MODELLEN-TT3-1)
-                pos2 = np.random.randint(pos1, MODELLEN-TT3-1)
-                pos3 = np.random.randint(-TT3, TT3)
-                NGENE1[pos1-pos3:pos2-pos3] = NGENE1[pos1:pos2]-pos3
-                NGENE2[pos1-pos3:pos2-pos3] = NGENE2[pos1:pos2]
-            if(np.random.uniform(0, 1) < 0.00625 * mutation_rate):
+            if(np.random.uniform(0, 1) < 0.00625):
                 TT3 = 2**np.random.randint(1, 14)
                 pos1 = np.random.randint(TT3+1, MODELLEN-TT3-1)
                 pos2 = np.random.randint(pos1, MODELLEN-TT3-1)
@@ -878,25 +834,216 @@ for step in range(100000):
             NGENES2.append(np.maximum(np.minimum(NGENE2, len(i0t) + len(i1t) + len(i2t)), 0))
             NGENES3.append(np.copy(NGENE3))
             del NGENE1, NGENE2, NGENE3
-        
-    print(step, np.min(losses), str(np.mean(losses)), str(np.max(losses)), bestacc, len(elites1))
+    GENES1 = NGENES1
+    GENES2 = NGENES2
+    GENES3 = NGENES3
+    for i in range(2):
+        img = batch_exec_structured_py(np.random.uniform(0, 1, (128, 96, 4)),
+                                                node_structs, struct_type, struct_func, struct_ch1, struct_ch2, struct_ch3,
+                                                struct_alpha, topo, last_k=4, restrict=True)
 
-    accs.append(str(np.min(losses)) + "," + str(np.mean(losses)) + "," + str(np.max(losses)) + "," + str(bestacc))
-    
-    if(step % 50 == 0):
-        np.savez('dats_.npz', genes1=GENES1, genes2=GENES2, genes3=GENES3, elites1=elites1, elites2=elites2, elites3=elites3)
+        for j in tqdm.tqdm(range(len(img))):
+            cv2.imwrite(f"imgs/{NOW_ITER+1}_{j}_{i}.jpg", np.maximum(0, np.minimum(255, ae.decode(torch.tensor(img[j][None], dtype=torch.float16).to("mps"))[0][0].cpu().detach().numpy().transpose((1, 2, 0)) * 255)))
+    NOW_ITER += 1
     gc.collect()
+    ELO_RATINGS = np.zeros(64)
+    VOTED_LIST = np.zeros(64)
+    regenerating = False
+    np.savez('dats.npz', genes1=GENES1, genes2=GENES2, genes3=GENES3)
+    return
+
+app = Flask(__name__, static_folder="imgs")
+
+@app.route("/pair", methods=["GET"])
+def get_pair():
+    global NOW_ITER, VOTED_LIST
+    i = np.random.randint(0, 2)
+    j = np.random.randint(0, 64)
+    j2 = np.random.randint(0, 64)
+    while j == j2:
+        j2 = np.random.randint(0, 64)
+    return jsonify({
+        "left": {"id": j, "url": f"/imgs/{NOW_ITER}_{j}_{i}.jpg", "score": ELO_RATINGS[j]},
+        "right": {"id": j2, "url": f"/imgs/{NOW_ITER}_{j2}_{i}.jpg", "score": ELO_RATINGS[j2]},
+        "iteration": NOW_ITER,
+        "iteration_2": np.sum(VOTED_LIST)//2,
+    })
+
+@app.route("/", methods=["GET"])
+def index():
+    return open('index.html', 'r').read()
+
+@app.route("/vote", methods=["POST"])
+def vote():
+    global ELO_RATINGS, VOTED_LIST
+    data = request.get_json(force=True)
+    if not data or "winner_id" not in data or "loser_id" not in data or int(data["winner_id"]) > 64 or int(data["loser_id"]) > 64:
+        return jsonify({"error":"invalid payload"}), 400
+    a = ELO_RATINGS[int(data["winner_id"])]
+    b = ELO_RATINGS[int(data["loser_id"])]
+    Wab = 32 / (10 ** ((a - b) / 400) + 1)
+
+    ELO_RATINGS[int(data["winner_id"])] += Wab
+    ELO_RATINGS[int(data["loser_id"])] -= Wab
+    VOTED_LIST[int(data["winner_id"])] += 1
+    VOTED_LIST[int(data["loser_id"])] += 1
+
+    print(ELO_RATINGS)
+    print(VOTED_LIST)
+
+    if(np.median(VOTED_LIST) >= 10 and np.min(VOTED_LIST) >= 1 and np.sum(VOTED_LIST) >= 1000):
+        regenerate()
+    return jsonify({"status":"ok"})
+
+app.run(host="0.0.0.0", port=8080, debug=False)
+
+"""    for d in tqdm.tqdm(datas):
+        logits = batch_exec_structured_py(np.array(d[0]).reshape((2, 48, 2, 48, 3)).transpose((1, 3, 0, 2, 4)).reshape((48, 48, 12)) / 255,
+                                        node_structs, struct_type, struct_func, struct_ch1, struct_ch2, struct_ch3,
+                                        struct_alpha, topo, last_k=3, restrict=True)
+        #logits = logits @ GENES3[]
+        n = 0
+        for logit_ in logits:
+            logit = np.mean(np.mean(logit_, axis=-1), axis=-1)
+            #logit = logit - np.max(logit)
+            #logit = np.exp(logit) / np.sum(np.exp(logit))
+            #losses[n] += np.nan_to_num(np.log(logit[d[1]]), nan=-10000) * 0.05
+            losses[n] += (np.argsort(-logit)[0] == d[1]) * 1 + (np.argsort(-logit)[1] == d[1]) / 4 + (np.argsort(-logit)[2] == d[1]) / 9 + (np.argsort(-logit)[3] == d[1]) / 16 + (np.argsort(-logit)[4] == d[1]) / 25 + (np.argsort(-logit)[5] == d[1]) / 36 + (np.argsort(-logit)[6] == d[1]) / 49 + (np.argsort(-logit)[7] == d[1]) / 64 + (np.argsort(-logit)[8] == d[1]) / 81
+            accuracys[n] += (np.argsort(-logit)[0] == d[1]) * 1.0
+            n += 1
+    losses = -losses / len(datas) * 100
+    accuracys = accuracys / len(datas) * 100
+
+    mutation_rate = np.random.uniform(0, 1)
+    if(np.random.uniform(0, 1) < 0.02):
+        mutation_rate = mutation_rate * (np.random.normal(0, 1) ** 2 + 1)
+
+    rank = np.argsort(losses)
+    if(np.max(-losses) / bestacc >= 1.01):
+        bestacc = np.max(-losses)
+        elites1.append(deepcopy(GENES1[rank[0]]))
+        elites2.append(deepcopy(GENES2[rank[0]]))
+        elites3.append(deepcopy(GENES3[rank[0]]))
+
+    NGENES1 = []
+    NGENES2 = []
+    NGENES3 = []
+    #rank = rank[np.random.randint(0, 20, 10)]
+    for g in range(13):
+        for h in range(13):
+            NGENE1 = deepcopy(GENES1[rank[g]])
+            NGENE2 = deepcopy(GENES2[rank[g]])
+            NGENE3 = deepcopy(GENES3[rank[g]])
+            pos1 = np.random.randint(0, MODELLEN-2)
+            pos2 = np.random.randint(pos1, MODELLEN-1)
+            NGENE1[pos1:pos2] = np.copy(GENES1[rank[h]][pos1:pos2])
+            NGENE2[pos1:pos2] = np.copy(GENES2[rank[h]][pos1:pos2])
+            p = np.random.uniform(0, 1)
+            NGENE3[pos1:pos2] = NGENE3[pos1:pos2] * p + GENES3[rank[h]][pos1:pos2] * (1-p)
+            if(np.random.uniform(0, 1) < 0.05):
+                for __ in range(np.random.randint(1, 2**np.random.randint(1, 14))):
+                    pos = np.random.randint(4, MODELLEN-3)
+                    NGENE3[pos] = np.random.uniform(0, 1)
+            if(np.random.uniform(0, 1) < 0.01):
+                pos1 = np.random.randint(0, MODELLEN-2)
+                pos2 = np.random.randint(pos1, MODELLEN-1)
+                NGENE3[pos1:pos2] = NGENE3[pos1:pos2] * np.random.uniform(0.2, 0.8) + np.random.normal(0, np.random.uniform(0, 1)) * np.random.uniform(0, 1)
+            if(np.random.uniform(0, 1) < 0.005):
+                NGENE3 = np.fft.ifft(np.fft.fft(NGENE3+0j, axis=0) * np.fft.fft(GENES3[rank[h]]+0j, axis=0) / np.fft.fft(GENES3[np.random.randint(0, len(GENES3))], axis=0), axis=0).real
+            if(np.random.uniform(0, 1) < 0.005):
+                NGENE3 = np.floor(NGENE3 + (GENES3[rank[h]] - GENES3[np.random.randint(0, len(GENES3))]) * np.random.uniform(0, 1.5))
+            NGENE3 = np.maximum(np.minimum(NGENE3, 1), 0)
+            if(np.random.uniform(0, 1) < 0.05):
+                for __ in range(np.random.randint(1, 2**np.random.randint(1, 14))):
+                    pos = np.random.randint(4, MODELLEN-3)
+                    NGENE1[pos][np.random.randint(0, 3)] = np.random.randint(0, pos-1)
+            if(np.random.uniform(0, 1) < 0.05):
+                for __ in range(np.random.randint(1, 2**np.random.randint(2, 14))):
+                    pos = np.random.randint(4, MODELLEN-3)
+                    NGENE2[pos] = np.random.choice(len(i0t) + len(i1t) + len(i2t), p=T)
+            if(np.random.uniform(0, 1) < 0.00015):
+                NGENE1 = np.abs(np.random.uniform(0, 1, (MODELLEN, 3)) * (np.arange(MODELLEN)[:, None]))
+            if(np.random.uniform(0, 1) < 0.00015):
+                NGENE2 = np.random.choice(len(i0t) + len(i1t) + len(i2t), (MODELLEN), p=T)
+            if(np.random.uniform(0, 1) < 0.003125):
+                TT3 = 2**np.random.randint(1, 14)
+                pos1 = np.random.randint(0, MODELLEN-2)
+                pos2 = np.random.randint(pos1, MODELLEN)
+                lv = np.random.randint(-TT3, TT3)
+                NGENE1[pos1:pos2] = NGENE1[pos1:pos2] + lv
+            if(np.random.uniform(0, 1) < 0.0003125):
+                NGENE1 = np.floor(np.fft.ifft(np.fft.fft(NGENE1+0j, axis=0) * np.fft.fft(GENES1[rank[h]]+0j, axis=0) / np.fft.fft(GENES1[np.random.randint(0, len(GENES1))], axis=0), axis=0).real)
+            if(np.random.uniform(0, 1) < 0.00015):
+                NGENE1 = np.floor(NGENE1 + (GENES1[rank[h]] - GENES1[np.random.randint(0, len(GENES1))]) * np.random.uniform(0, 1.5))
+            if(np.random.uniform(0, 1) < 0.00015):
+                NGENE1 = np.floor(NGENE1 + (GENES1[rank[h]] - GENES1[np.random.randint(0, len(GENES1))]))
+            if(np.random.uniform(0, 1) < 0.003125):
+                TT3 = 2**np.random.randint(1, 14)
+                pos1 = np.random.randint(TT3+1, MODELLEN-TT3-1)
+                pos2 = np.random.randint(pos1, MODELLEN-TT3-1)
+                pos3 = np.random.randint(-TT3, TT3)
+                NGENE1[pos1-pos3:pos2-pos3] = NGENE1[pos1:pos2]
+            if(np.random.uniform(0, 1) < 0.003125):
+                TT3 = 2**np.random.randint(1, 14)
+                pos1 = np.random.randint(TT3+1, MODELLEN-TT3-1)
+                pos2 = np.random.randint(pos1, MODELLEN-TT3-1)
+                pos3 = np.random.randint(-TT3, TT3)
+                NGENE2[pos1-pos3:pos2-pos3] = NGENE2[pos1:pos2]
+            if(np.random.uniform(0, 1) < 0.00625):
+                TT3 = 2**np.random.randint(1, 14)
+                pos1 = np.random.randint(TT3+1, MODELLEN-TT3-1)
+                pos2 = np.random.randint(pos1, MODELLEN-TT3-1)
+                pos3 = np.random.randint(-TT3, TT3)
+                NGENE1[pos1-pos3:pos2-pos3] = NGENE1[pos1:pos2]
+                NGENE2[pos1-pos3:pos2-pos3] = NGENE2[pos1:pos2]
+            NGENE1 = np.maximum(NGENE1, 0)
+            NGENE1 = np.minimum(NGENE1, np.maximum((np.arange(MODELLEN)-2)[:, None], 0))
+            NGENES1.append(np.abs(np.copy(NGENE1)))
+            NGENES2.append(np.maximum(np.minimum(NGENE2, len(i0t) + len(i1t) + len(i2t)), 0))
+            NGENES3.append(np.copy(NGENE3))
+            del NGENE1, NGENE2, NGENE3
+
+    print(step, np.min(losses), str(np.max(accuracys)) + "%", str(np.mean(accuracys)) + "%", str(np.min(accuracys)) + "%", bestacc, len(elites1))
+
+    accs.append(str(np.min(losses)) + "," + str(np.max(accuracys)) + "%" + "," + str(np.mean(accuracys)) + "%" + "," + str(np.min(accuracys)) + "%" + "," + str(bestacc))
+    
+    for tt in range(13):
+        NGENES1.append(deepcopy(GENES1[rank[tt]]))
+        NGENES2.append(deepcopy(GENES2[rank[tt]]))
+        NGENES3.append(deepcopy(GENES3[rank[tt]]))
+    if(step % 200 == 199):
+        np.savez('dats.npz', genes1=GENES1, genes2=GENES2, genes3=GENES3, elites1=elites1, elites2=elites2, elites3=elites3)
+        gc.collect()
+        acc = np.zeros(len(GENES1))
+        loss = np.zeros(len(GENES1))
+
+        G1 = np.stack([g.astype(np.int64) for g in GENES1], axis=0)   # shape (N, MODELLEN, 2)
+        G2 = np.stack([g.astype(np.int64) for g in GENES2], axis=0)   # shape (N, MODELLEN)
+        node_structs, struct_type, struct_func, struct_ch1, struct_ch2, struct_ch3, struct_alpha, idxs, struct_to_nodes_pair = \
+            precompute_structs_numba(G1, G2, G3, len(i0t), len(i1t), len(i2t), last_k=10)
+
+        topo = topo_sort_structs_numba_from_arrays(struct_type, struct_ch1, struct_ch2, struct_ch3)
+
+        for d in tqdm.tqdm(test_datas):
+            logits = batch_exec_structured_py(np.array(d[0]).reshape((2, 48, 2, 48, 3)).transpose((1, 3, 0, 2, 4)).reshape((48, 48, 12)) / 255,
+                                            node_structs, struct_type, struct_func, struct_ch1, struct_ch2, struct_ch3,
+                                            struct_alpha, topo, last_k=10, restrict=True)
+            for t in range(len(logits)):
+                logit_ = logits[t]
+                logit = np.mean(np.mean(logit_, axis=-1), axis=-1)
+                acc[t] += (np.argsort(-logit)[0] == d[1]) * 1
+                loss[t] += (np.argsort(-logit)[0] == d[1]) * 1 + (np.argsort(-logit)[1] == d[1]) / 4 + (np.argsort(-logit)[2] == d[1]) / 9 + (np.argsort(-logit)[3] == d[1]) / 16 + (np.argsort(-logit)[4] == d[1]) / 25 + (np.argsort(-logit)[5] == d[1]) / 36 + (np.argsort(-logit)[6] == d[1]) / 49 + (np.argsort(-logit)[7] == d[1]) / 64 + (np.argsort(-logit)[8] == d[1]) / 81
+        accs2.append(np.max(loss) * 100.0 / len(test_datas))
+        print(f"step#{step} train_accuracy: {np.max(accuracys)}% test_accurary: {np.max(acc) * 100.0 / len(test_datas)}% test_top9_accuracy: {np.max(loss) * 100.0 / len(test_datas)}")
+        for jt in accs:
+            print(jt)
+        for jt in accs2:
+            print(jt)
     del GENES1, GENES2, GENES3
     GENES1 = NGENES1
     GENES2 = NGENES2
     GENES3 = NGENES3
-    GENES1.extend(elites1[-32:])
-    GENES2.extend(elites2[-32:])
-    GENES3.extend(elites3[-32:])
-    if(len(elites1) > 40):
-        for j in range(8):
-            p = np.random.randint(0, len(elites1))
-            GENES1.append(elites1[p])
-            GENES2.append(elites2[p])
-            GENES3.append(elites3[p])
-    gc.collect()
+    GENES1.extend(elites1)
+    GENES2.extend(elites2)
+    GENES3.extend(elites3)
+    gc.collect()"""

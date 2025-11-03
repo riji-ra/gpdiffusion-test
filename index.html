@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>遺伝的プログラミングで最高にえっちでエシカルな画像生成モデルを作ろう！</title>
+    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@100..900&display=swap');
+        body{
+            font-family: "Noto Sans JP", sans-serif;
+        }
+    </style>
+</head>
+<body class="bg-slate-50 m-4">
+    <div class="text-center w-full md:w-3/5 lg:w-2/5 mx-auto">
+        <h1 class="text-4xl text-slate-700">
+            遺伝的プログラミング(とその他黒魔術)で最高にえっちで<ruby>倫理的<rt>エシカル</rt></ruby>な画像生成モデルを作ろう！
+        </h1>
+        <div class="text-right w-full text-slate-700">
+            <div>
+                <span id="iteration"></span><span>世代目</span>
+                <span id="iteration_2"></span><span>/1000回目の投票</span>
+            </div>
+        </div>
+        <div class="mt-4 flex justify-center">
+            <div class="w-1/2">
+                <img id="left-img" class="hover:brightness-50 cursor-pointer w-full h-full object-cover">
+                <div id="left-img-score"></div>
+            </div>
+            <div class="w-1/2">
+                <img id="right-img" class="hover:brightness-50 cursor-pointer w-full h-full object-cover">
+                <div id="right-img-score"></div>
+            </div>
+        </div>
+        <p class="mt-6 text-slate-700">
+            二つの画像のうちどちらの方がえっちかを選んでください。<br>世代交代を経るごとにモデルが学習され、だんだんとえっちな画像が表示されるようになるはずです。
+        </p>
+        <h2 class="mt-8 text-4xl text-slate-700">
+            この社会実験について
+        </h2>
+        <p class="mt-2 text-slate-700">
+            数年前に流行した<a class="text-emerald-500" href="https://gamingchahan.com/ecchi/">とある社会実験</a>のパロディです。<br><br>
+            投票という民主的な手段のみで(他所の画像を参考とせず)画像生成モデルを開発可能か確かめるため、通常の生成モデルの代替として「遺伝的プログラミング」を採用しています。<br><br>
+            画像処理や線形代数で有名な関数(FFT, 畳み込み, 行列積, アフィン変換などなど…)を一つ一つのノードに押し込み、画像生成を行うプログラムを木構造として表し、遺伝子に例えて進化させることで画像生成モデルを開発することを目指しています。<br><br>
+            また、流石に高解像度の画像では学習対象が完全に存在しない状態から訓練は難しいので、次元削減の部分だけ<a class="text-emerald-500" href="https://huggingface.co/madebyollin/taesdxl">TAESDXL</a>という事前訓練済みVAEを利用しています。<br><br>
+            (ここに書いた以外にもかなり複雑な仕組みなので、詳細は<a class="text-emerald-500" href="https://github.com/riji-ra/gpdiffusion-test">GitHubにあるソースコード</a>をご参照ください)
+        </p>
+    </div>
+    <script>
+        const leftImg = document.getElementById("left-img");
+        const rightImg = document.getElementById("right-img");
+        const leftImgScore = document.getElementById("left-img-score");
+        const rightImgScore = document.getElementById("right-img-score");
+        const iteration = document.getElementById("iteration");
+        const iteration_2 = document.getElementById("iteration_2");
+        let data = null
+        const func = () => {fetch("/pair")
+            .then(response => response.json())
+            .then(d => {
+                data = d;
+                leftImg.src = data.left.url;
+                rightImg.src = data.right.url;
+                leftImgScore.textContent = "モデル#" + (data.left.id+1) + " スコア: " + data.left.score.toFixed(2);
+                rightImgScore.textContent = "モデル#" + (data.right.id+1) + " スコア: " + data.right.score.toFixed(2);
+                iteration.textContent = data.iteration+1;
+                iteration_2.textContent = data.iteration_2+1;
+            });}
+        func();
+        leftImg.addEventListener("click", () => {
+            fetch("/vote", {
+                method: "POST",
+                body: JSON.stringify({winner_id: data.left.id, loser_id: data.right.id})
+            });
+            func();
+        });
+        rightImg.addEventListener("click", () => {
+            fetch("/vote", {
+                method: "POST",
+                body: JSON.stringify({winner_id: data.right.id, loser_id: data.left.id})
+            });
+            func();
+        });
+    </script>
+</body>
+</html>
