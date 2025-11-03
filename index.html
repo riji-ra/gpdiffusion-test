@@ -33,9 +33,6 @@
                 <div id="right-img-score"></div>
             </div>
         </div>
-        <div class="mt-6 text-slate-700 text-xl hover:text-slate-800 cursor-pointer" id="img_change">
-            他の画像
-        </div>
         <p class="mt-4 text-slate-700">
             二つの画像のうちどちらの方がえっちかを選んでください。<br>世代交代を経るごとにモデルが学習され、だんだんと高精度なえっちな画像が表示されるようになるはずです。<br/>
             よりえっちな画像を作るために、ぜひ色んな人に広めてください。
@@ -58,7 +55,6 @@
         const leftImgScore = document.getElementById("left-img-score");
         const rightImgScore = document.getElementById("right-img-score");
         const iteration = document.getElementById("iteration");
-        const iteration_2 = document.getElementById("iteration_2");
         const img_change = document.getElementById("img_change");
         let data = null
         const func = () => {fetch("/pair")
@@ -67,8 +63,8 @@
                 data = d;
                 leftImg.src = data.left.url;
                 rightImg.src = data.right.url;
-                leftImgScore.textContent = "モデル#" + (data.left.id+1) + " スコア: " + data.left.score.toFixed(2);
-                rightImgScore.textContent = "モデル#" + (data.right.id+1) + " スコア: " + data.right.score.toFixed(2);
+                leftImgScore.textContent = "モデル#" + (data.left.id+1) + " 現在のスコア: " + data.left.score.toFixed(2);
+                rightImgScore.textContent = "モデル#" + (data.right.id+1) + " 現在のスコア: " + data.right.score.toFixed(2);
                 iteration.textContent = data.iteration+1;
                 iteration_2.textContent = data.iteration_2+1;
             });}
@@ -86,11 +82,6 @@
                 body: JSON.stringify({winner_id: data.right.id, loser_id: data.left.id})
             });
             func();
-        });
-        img_change.addEventListener("click", () => {
-            leftImg.src = leftImg.src.replace("_" + data.iteration + ".jpg", "_" + (data.iteration+1)%4 + ".jpg");
-            rightImg.src = rightImg.src.replace("_" + data.iteration + ".jpg", "_" + (data.iteration+1)%4 + ".jpg");
-            data.iteration = (data.iteration+1)%4;
         });
     </script>
 </body>
