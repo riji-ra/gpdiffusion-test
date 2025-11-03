@@ -38,9 +38,11 @@
         <div class="mt-4 flex justify-center">
             <div class="w-1/2">
                 <img id="left-img" class="hover:brightness-50 cursor-pointer w-full h-full object-cover">
+                <div id="left-img-score"></div>
             </div>
             <div class="w-1/2">
                 <img id="right-img" class="hover:brightness-50 cursor-pointer w-full h-full object-cover">
+                <div id="right-img-score"></div>
             </div>
         </div>
         <p class="mt-4 text-slate-700">
@@ -65,6 +67,7 @@
         const leftImgScore = document.getElementById("left-img-score");
         const rightImgScore = document.getElementById("right-img-score");
         const iteration = document.getElementById("iteration");
+        const iteration_2 = document.getElementById("iteration_2");
         const img_change = document.getElementById("img_change");
         let data = {left:{}, right:{}}
         data.left.id = Math.floor(Math.random() * 144)
@@ -73,24 +76,21 @@
         rightImg.src = "/gp" + data.iteration + "_" + Math.floor(Math.random() * data.right.id) + "_0.jpg"
         leftImgScore.textContent = "モデル#" + (data.left.id+1)
         rightImgScore.textContent = "モデル#" + (data.right.id+1)
+
         const func = () => {
+            fetch("/gp/pair")
+            .then(response => response.json())
+            .then(d => {
+                data = d;
+                iteration.textContent = data.iteration+1;
+                iteration_2.textContent = data.iteration_2+1;
+            })
             data.left.id = Math.floor(Math.random() * 144)
             data.right.id = Math.floor(Math.random() * 144)
             leftImg.src = "/gp" + data.iteration + "_" + Math.floor(Math.random() * data.left.id) + "_0.jpg"
             rightImg.src = "/gp" + data.iteration + "_" + Math.floor(Math.random() * data.right.id) + "_0.jpg"
             leftImgScore.textContent = "モデル#" + (data.left.id+1)
             rightImgScore.textContent = "モデル#" + (data.right.id+1)
-            fetch("/gp/pair")
-            .then(response => response.json())
-            .then(d => {
-                data = d;
-                //leftImg.src = "/gp" + data.left.url;
-                /*rightImg.src = "/gp" + data.right.url;
-                leftImgScore.textContent = "モデル#" + (data.left.id+1) + " 現在のスコア: " + data.left.score.toFixed(2);
-                rightImgScore.textContent = "モデル#" + (data.right.id+1) + " 現在のスコア: " + data.right.score.toFixed(2);*/
-                iteration.textContent = data.iteration+1;
-                iteration_2.textContent = data.iteration_2+1;
-            });}
         func();
         leftImg.addEventListener("click", () => {
             fetch("/gp/vote", {
