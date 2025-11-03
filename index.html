@@ -78,7 +78,7 @@
             .then(d => {
                 data.iteration = d.iteration;
                 data.iteration_2 = d.iteration_2;
-                iteration.textContent = data.iteration+1;
+                iteration.textContent = data.iteration+2;
                 iteration_2.textContent = data.iteration_2+1;
                 leftImg.src = "/gp/imgs/" + data.iteration + "_" + data.left.id + "_0.jpg"
                 rightImg.src = "/gp/imgs/" + data.iteration + "_" + data.right.id + "_0.jpg"
@@ -100,7 +100,7 @@
             iimgs.style.opacity = 0.01
             setTimeout(() => {
                 iimgs.style.opacity = 1
-            }, 1000)
+            }, 1500)
         });
         rightImg.addEventListener("click", () => {
             fetch("/gp/vote", {
@@ -111,7 +111,7 @@
             iimgs.style.opacity = 0.01
             setTimeout(() => {
                 iimgs.style.opacity = 1
-            }, 1000)
+            }, 1500)
         });
     </script>
 </body>
