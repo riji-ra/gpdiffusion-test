@@ -49,17 +49,6 @@
             二つの画像のうちどちらの方がえっちかを選んでください。<br>世代交代を経るごとにモデルが学習され、だんだんと高精度なえっちな画像が表示されるようになるはずです。<br/>
             よりえっちな画像を作るために、ぜひ色んな人に広めてください。
         </p>
-        <h2 class="mt-8 text-4xl text-slate-700">
-            この社会実験について
-        </h2>
-        <p class="mt-2 text-slate-700">
-            数年前に流行した<a class="text-emerald-500" href="https://gamingchahan.com/ecchi/">とある社会実験</a>のパロディです。<br><br>
-            投票という民主的な手段のみで(他所の画像を参考とせず)画像生成モデルを開発可能か確かめるため、通常の生成モデルの代替として「遺伝的プログラミング」を採用しています。<br><br>
-            画像処理や線形代数で有名な関数(FFT, 畳み込み, 行列積, アフィン変換などなど…)を一つ一つのノードに押し込み、乱数ノイズから画像生成を行うプログラムを木構造として表し、遺伝子に例えて進化させることで画像生成モデルを開発することを目指しています。<br><br>
-            モデルは167種の関数を使用することができ、最大で300000のノードで構成されます。<br><br>
-            また、流石に高解像度の画像では学習対象が完全に存在しない状態から訓練は難しいので、次元削減の部分だけ<a class="text-emerald-500" href="https://huggingface.co/madebyollin/taesdxl">TAESDXL</a>という事前訓練済みVAEを利用しています。<br><br>
-            (ここに書いた以外にもかなり複雑な仕組みなので、詳細は<a class="text-emerald-500" href="https://github.com/riji-ra/gpdiffusion-test">GitHubにあるソースコード</a>をご参照ください)
-        </p>
         <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-5962558613489232"
             crossorigin="anonymous"></script>
         <!-- kokoku1 -->
@@ -72,6 +61,17 @@
         <script>
             (adsbygoogle = window.adsbygoogle || []).push({});
         </script>
+        <h2 class="mt-8 text-4xl text-slate-700">
+            この社会実験について
+        </h2>
+        <p class="mt-2 text-slate-700">
+            数年前に流行した<a class="text-emerald-500" href="https://gamingchahan.com/ecchi/">とある社会実験</a>のパロディです。<br><br>
+            投票という民主的な手段のみで(他所の画像を参考とせず)画像生成モデルを開発可能か確かめるため、通常の生成モデルの代替として「遺伝的プログラミング」を採用しています。<br><br>
+            画像処理や線形代数で有名な関数(FFT, 畳み込み, 行列積, アフィン変換などなど…)を一つ一つのノードに押し込み、乱数ノイズから画像生成を行うプログラムを木構造として表し、遺伝子に例えて進化させることで画像生成モデルを開発することを目指しています。<br><br>
+            モデルは167種の関数を使用することができ、最大で300000のノードで構成されます。<br><br>
+            また、流石に高解像度の画像では学習対象が完全に存在しない状態から訓練は難しいので、次元削減の部分だけ<a class="text-emerald-500" href="https://huggingface.co/madebyollin/taesdxl">TAESDXL</a>という事前訓練済みVAEを利用しています。<br><br>
+            (ここに書いた以外にもかなり複雑な仕組みなので、詳細は<a class="text-emerald-500" href="https://github.com/riji-ra/gpdiffusion-test">GitHubにあるソースコード</a>をご参照ください)
+        </p>
     </div>
     <script>
         const leftImg = document.getElementById("left-img");
