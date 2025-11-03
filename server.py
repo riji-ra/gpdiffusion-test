@@ -21,7 +21,7 @@ url = "https://keik.org/gp"
 try:
     r = requests.get(url, timeout=5)
     if r.status_code == 200:
-        sleep(60000)
+        time.sleep(60000)
         exit(0)
     else:
         pass
