@@ -731,9 +731,9 @@ if(os.path.exists("dats.npz")):
         if("iter" in data.keys()):
             NOW_ITER = int(np.mean(data["iter"]))
         else:
-            NOW_ITER = 3
+            NOW_ITER = 5
     except:
-        NOW_ITER = 3
+        NOW_ITER = 5
 
 #datas = [trainset[np.random.randint(0, len(trainset)-1)] for j in range(64)]
 #test_datas = [testset[np.random.randint(0, len(testset)-1)] for j in range(2048)]
