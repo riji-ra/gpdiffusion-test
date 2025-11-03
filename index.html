@@ -66,7 +66,7 @@
         const rightImgScore = document.getElementById("right-img-score");
         const iteration = document.getElementById("iteration");
         const img_change = document.getElementById("img_change");
-        let data = {}
+        let data = {left:{}, right:{}}
         data.left.id = Math.floor(Math.random() * 144)
         data.right.id = Math.floor(Math.random() * 144)
         leftImg.src = "/gp" + data.iteration + "_" + Math.floor(Math.random() * data.left.id) + "_0.jpg"
