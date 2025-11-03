@@ -694,7 +694,7 @@ def batch_exec_structured_py(input_arr,
 # -----------------------------
 # メイン側で使う遺伝子の形を三項に合わせる
 # -----------------------------
-MODELLEN = 300000
+MODELLEN = 500000
 GENES1 = []
 GENES2 = []
 GENES3 = []
@@ -734,7 +734,7 @@ topo = topo_sort_structs_numba_from_arrays(struct_type, struct_ch1, struct_ch2, 
 
 print("topology calculated")
 
-for i in range(2):
+for i in range(4):
     img = batch_exec_structured_py(np.random.uniform(0, 1, (128, 96, 4)),
                                             node_structs, struct_type, struct_func, struct_ch1, struct_ch2, struct_ch3,
                                             struct_alpha, topo, last_k=4, restrict=True)
@@ -837,7 +837,7 @@ def regenerate():
     GENES1 = NGENES1
     GENES2 = NGENES2
     GENES3 = NGENES3
-    for i in range(2):
+    for i in range(4):
         img = batch_exec_structured_py(np.random.uniform(0, 1, (128, 96, 4)),
                                                 node_structs, struct_type, struct_func, struct_ch1, struct_ch2, struct_ch3,
                                                 struct_alpha, topo, last_k=4, restrict=True)
