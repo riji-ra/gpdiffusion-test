@@ -898,7 +898,7 @@ def vote():
     print(ELO_RATINGS)
     print(VOTED_LIST)
 
-    if(np.median(VOTED_LIST) >= 10 and np.min(VOTED_LIST) >= 1 and np.sum(VOTED_LIST) >= 1600):
+    if(np.median(VOTED_LIST) >= 5 and np.min(VOTED_LIST) >= 1 and np.sum(VOTED_LIST) >= 800):
         regenerate()
     return jsonify({"status":"ok"})
 
