@@ -732,7 +732,7 @@ G3 = np.stack([g.astype(np.float32) for g in GENES3], axis=0)   # shape (N, MODE
 import torch
 from diffusers import DiffusionPipeline, AutoencoderKL
 
-ae = AutoencoderTiny.from_pretrained("madebyollin/taesdxl", torch_dtype=torch.float16).to("cuda")
+ae = AutoencoderTiny.from_pretrained("madebyollin/taesdxl", torch_dtype=torch.float16).to("mps")
 
 node_structs, struct_type, struct_func, struct_ch1, struct_ch2, struct_ch3, struct_alpha, idxs, struct_to_nodes_pair = \
     precompute_structs_numba(G1, G2, G3, len(i0t), len(i1t), len(i2t), last_k=4)
@@ -747,7 +747,7 @@ for i in range(1):
                                             struct_alpha, topo, last_k=4, restrict=True)
 
     for j in tqdm.tqdm(range(len(img))):
-        cv2.imwrite(f"imgs/0_{j}_{i}.jpg", np.maximum(0, np.minimum(255, ae.decode(torch.tensor(img[j][None], dtype=torch.float16).to("cuda"))[0][0].cpu().detach().numpy().transpose((1, 2, 0)) * 255)))
+        cv2.imwrite(f"imgs/0_{j}_{i}.jpg", np.maximum(0, np.minimum(255, ae.decode(torch.tensor(img[j][None], dtype=torch.float16).to("mps"))[0][0].cpu().detach().numpy().transpose((1, 2, 0)) * 255)))
 
 
 NOW_ITER = 0
@@ -850,7 +850,7 @@ def regenerate():
                                                 struct_alpha, topo, last_k=4, restrict=True)
 
         for j in tqdm.tqdm(range(len(img))):
-            cv2.imwrite(f"imgs/{NOW_ITER+1}_{j}_{i}.jpg", np.maximum(0, np.minimum(255, ae.decode(torch.tensor(img[j][None], dtype=torch.float16).to("cuda"))[0][0].cpu().detach().numpy().transpose((1, 2, 0)) * 255)))
+            cv2.imwrite(f"imgs/{NOW_ITER+1}_{j}_{i}.jpg", np.maximum(0, np.minimum(255, ae.decode(torch.tensor(img[j][None], dtype=torch.float16).to("mps"))[0][0].cpu().detach().numpy().transpose((1, 2, 0)) * 255)))
     NOW_ITER += 1
     gc.collect()
     ELO_RATINGS = np.zeros(144)
@@ -870,8 +870,8 @@ def get_pair():
     while j == j2:
         j2 = np.random.randint(0, 12*12)
     return jsonify({
-        "left": {"id": j, "url": f"/imgs/{NOW_ITER}_{j}_{i}.jpg", "score": ELO_RATINGS[j]},
-        "right": {"id": j2, "url": f"/imgs/{NOW_ITER}_{j2}_{i}.jpg", "score": ELO_RATINGS[j2]},
+        "left": {"id": j, "url": f"/gp/imgs/{NOW_ITER}_{j}_{i}.jpg", "score": ELO_RATINGS[j]},
+        "right": {"id": j2, "url": f"/gp/imgs/{NOW_ITER}_{j2}_{i}.jpg", "score": ELO_RATINGS[j2]},
         "iteration": NOW_ITER,
         "iteration_2": np.sum(VOTED_LIST)//2,
     })
