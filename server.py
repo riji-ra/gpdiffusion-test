@@ -702,7 +702,7 @@ GENES3 = []
 
 
 for p in range(144):
-    GENES1.append(np.abs((1-np.random.uniform(0, 1, (MODELLEN, 3))) * (np.arange(MODELLEN)[:, None])))
+    GENES1.append(np.abs((1-np.random.uniform(0, 1, (MODELLEN, 3)) ** 1.5) * (np.arange(MODELLEN)[:, None])))
     GENES2.append(np.random.choice(len(i0t) + len(i1t) + len(i2t), (MODELLEN), p=T))
     GENES3.append(np.random.uniform(0, 1, (MODELLEN)))
     # G1 は (MODELLEN, 3) にして三つの子ノード参照を持たせる
