@@ -73,8 +73,8 @@
             .then(response => response.json())
             .then(d => {
                 data = d;
-                leftImg.src = data.left.url;
-                rightImg.src = data.right.url;
+                leftImg.src = "/gp" + data.left.url;
+                rightImg.src = "/gp" + data.right.url;
                 leftImgScore.textContent = "モデル#" + (data.left.id+1) + " 現在のスコア: " + data.left.score.toFixed(2);
                 rightImgScore.textContent = "モデル#" + (data.right.id+1) + " 現在のスコア: " + data.right.score.toFixed(2);
                 iteration.textContent = data.iteration+1;
