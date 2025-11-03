@@ -27,8 +27,7 @@ def is_port_in_use(port: int, host: str = "0.0.0.0") -> bool:
             time.sleep(60000)
             exit(0)
 
-port = 8080
-is_port_in_use()
+is_port_in_use(8080)
 
 PE = lambda a: np.meshgrid(np.linspace(0, 1, a.shape[1]), np.linspace(0, 1, a.shape[0]))
 
