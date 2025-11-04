@@ -18,16 +18,6 @@ import requests
 import time
 import socket
 
-def is_port_in_use(port: int, host: str = "0.0.0.0") -> bool:
-    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
-        try:
-            s.bind((host, port))
-            pass
-        except OSError:
-            time.sleep(60000)
-            exit(0)
-
-is_port_in_use(8080)
 
 PE = lambda a: np.meshgrid(np.linspace(0, 1, a.shape[1]), np.linspace(0, 1, a.shape[0]))
 
