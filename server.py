@@ -865,6 +865,11 @@ def regenerate():
     GENES1 = NGENES1
     GENES2 = NGENES2
     GENES3 = NGENES3
+    node_structs, struct_type, struct_func, struct_ch1, struct_ch2, struct_ch3, struct_alpha, idxs, struct_to_nodes_pair = \
+        precompute_structs_numba(G1, G2, G3, len(i0t), len(i1t), len(i2t), last_k=4)
+
+    topo = topo_sort_structs_numba_from_arrays(struct_type, struct_ch1, struct_ch2, struct_ch3)
+
     for i in range(1):
         img = batch_exec_structured_py(np.random.uniform(0, 1, (128, 96, 4)),
                                                 node_structs, struct_type, struct_func, struct_ch1, struct_ch2, struct_ch3,
