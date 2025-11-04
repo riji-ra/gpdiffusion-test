@@ -865,6 +865,10 @@ def regenerate():
     GENES1 = NGENES1
     GENES2 = NGENES2
     GENES3 = NGENES3
+    G1 = np.stack([g.astype(np.int64) for g in GENES1], axis=0)   # shape (N, MODELLEN, 2)
+    G2 = np.stack([g.astype(np.int64) for g in GENES2], axis=0)   # shape (N, MODELLEN)
+    G3 = np.stack([g.astype(np.float32) for g in GENES3], axis=0)   # shape (N, MODELLEN)
+
     node_structs, struct_type, struct_func, struct_ch1, struct_ch2, struct_ch3, struct_alpha, idxs, struct_to_nodes_pair = \
         precompute_structs_numba(G1, G2, G3, len(i0t), len(i1t), len(i2t), last_k=4)
 
