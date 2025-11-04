@@ -108,10 +108,6 @@
                 body: JSON.stringify({winner_id: data.left.id, loser_id: data.right.id})
             });
             func();
-            iimgs.style.opacity = 0.05
-            setTimeout(() => {
-                iimgs.style.opacity = 1
-            }, 1500)
         });
         rightImg.addEventListener("click", () => {
             fetch("/gp/vote", {
@@ -119,10 +115,6 @@
                 body: JSON.stringify({winner_id: data.right.id, loser_id: data.left.id})
             });
             func();
-            iimgs.style.opacity = 0.05
-            setTimeout(() => {
-                iimgs.style.opacity = 1
-            }, 1500)
         });
     </script>
 </body>
