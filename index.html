@@ -108,10 +108,13 @@
                 body: JSON.stringify({winner_id: data.left.id, loser_id: data.right.id})
             });
             func();
-            iimgs.style.opacity = 0.01
-            setTimeout(() => {
-                iimgs.style.opacity = 1
-            }, 1200)
+            iimgs.style.opacity = 0.05
+            const p = setInterval(() => {
+                iimgs.style.opacity = iimgs.style.opacity * 0.9 + 0.9 * 0.1
+                if(iimgs.style.opacity >= 0.99){
+                    clearInterval(p)
+                }
+            }, 50)
         });
         rightImg.addEventListener("click", () => {
             fetch("/gp/vote", {
@@ -119,10 +122,13 @@
                 body: JSON.stringify({winner_id: data.right.id, loser_id: data.left.id})
             });
             func();
-            iimgs.style.opacity = 0.01
-            setTimeout(() => {
-                iimgs.style.opacity = 1
-            }, 1200)
+            iimgs.style.opacity = 0.05
+            const p = setInterval(() => {
+                iimgs.style.opacity = iimgs.style.opacity * 0.9 + 0.9 * 0.1
+                if(iimgs.style.opacity >= 0.99){
+                    clearInterval(p)
+                }
+            }, 50)
         });
     </script>
 </body>
